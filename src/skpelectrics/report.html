@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Table Data</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+  <!-- Include jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+  <h1>Линии</h1>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Код линии</th>
+        <th>Помещение</th>
+        <th>Описание</th>
+        <th>Тип</th>
+        <th>длинна кабеля м.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Rows will be populated here -->
+    </tbody>
+  </table>
+
+  <table id="tbl_totals_type">
+    <thead>
+      <tr>
+        <th>Тип</th>
+        <th>длинна кабеля м.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Rows will be populated here -->
+    </tbody>
+  </table>
+
+  <table id="tbl_totals_room">
+    <thead>
+      <tr>
+        <th>Тип</th>
+        <th>длинна кабеля м.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Rows will be populated here -->
+    </tbody>
+  </table>
+
+  <script>
+    // Function to populate the table with data using jQuery
+    function print_report(data, totals_type, totals_room, types) {
+
+      const $tableBodyCols = $('#dataTable tr');
+
+      //alert(types)
+
+      //$tableBodyCols.append('<tr>')
+      types.forEach(type => {
+        $tableBodyCols.append('<th>' + type[0] + '</th>');
+      });
+      //$tableBodyCols.append('</tr>')
+
+      const $tableBody = $('#dataTable tbody');
+      $tableBody.empty(); // Clear existing rows
+
+      // Append rows using jQuery
+      data.forEach(line => {
+        const $row = $('<tr>')
+          .append($('<td>').text(line.groupid))
+          .append($('<td>').text(line.group.room))
+          .append($('<td>').text(line.group.description))
+          .append($('<td>').text(line.group.type))
+          .append($('<td>').text(line.len));
+
+        //alert(JSON.stringify(line.wiring))
+        /*line.wiring.forEach(tp => {
+          alert(tp);
+        });*/
+        var wirings = line.wiring
+        types.forEach(tp => {
+          $row.append($('<td>').text(round_meters(wirings[tp[0]])));
+        });
+        $tableBody.append($row);
+      });
+
+
+      /// totals by line type
+
+      const $tbl_totals_type = $('#tbl_totals_type tbody');
+      $tbl_totals_type.empty(); // Clear existing rows
+
+      totals_type.forEach(type => {
+        const $row = $('<tr>')
+          .append($('<td>').text(type[0]))
+          .append($('<td>').text(type[1]))
+        $tbl_totals_type.append($row);
+      });
+
+      /// totals by room
+
+      const $tbl_totals_room = $('#tbl_totals_room tbody');
+      $tbl_totals_room.empty(); // Clear existing rows
+
+      totals_room.forEach(room => {
+        const $row = $('<tr>')
+          .append($('<td>').text(room[0]))
+          .append($('<td>').text(room[1]))
+        $tbl_totals_room.append($row);
+      });
+
+    }
+
+    function round_meters(num) {
+      if (num != null) {
+        return Number((num).toFixed(3)).toString().replace(".", ",")
+      }
+      else {
+        return ""
+      }
+
+    }
+    // Notify Ruby to send the table data
+    $(document).ready(function () {
+      window.location = 'skp:getTableData';
+    });
+  </script>
+</body>
+
+</html>

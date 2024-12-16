@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Table Data</title>
+  <!-- Include jQuery -->
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <script src="./js/jquery.tablesorter.min.js"></script>
+  <link rel="stylesheet" href="./css/skpelectrics_css.css">
+</head>
+
+<body>
+  <h1>Настройки SkpElectrics</h1>
+  <div id="choose_wiring_template">
+    <select id="line_template" onselect="change_wtype">
+      <option value="1">№1 - 15-РОЗ-КУХ розетки кухня</option>
+      <option value="2">№2 - 3РОЗ1 ВВГНГ 3x1.5</option>
+    </select>
+  </div>
+  <div>
+    <button type="button" onclick="save_settings()">
+      Сохранить
+    </button>
+    <div id="result_status" style="color: #4caf50;" hidden>сохранено</div>
+  </div>
+
+  <div id="example_tempalte_1" name="example" hidden>
+    <h1>Формат данных №1</h1>
+    <p><b>15-РОЗ-КУХ розетки кухня</b></p>
+    <p>Строка должна состоять из нескольких частей, разделенных дефисами (<code>-</code>). Последняя часть (описание)
+      является опциональной. Формат строки:</p>
+    <p class="code">&lt;номер строки&gt;-&lt;тип нагрузки&gt;-&lt;комната&gt; [описание]</p>
+
+    <h2>Части строки</h2>
+    <ul>
+      <li><strong>Номер строки</strong>: число, состоящее из одной или более цифр. Пример: <code>123</code>.</li>
+      <li><strong>Тип нагрузки</strong>: от 1 до 3 символов, состоящих из заглавных букв (латинских или кириллических)
+        и/или цифр. Пример: <code>A1</code>, <code>ЯЯ2</code>.</li>
+      <li><strong>Комната</strong>: строка из букв (латинских или кириллических) и/или цифр. Пример: <code>Room1</code>,
+        <code>Комната2</code>.
+      </li>
+      <li><strong>Описание</strong> (опционально): дополнительный текст, начинающийся с пробела. Пример:
+        <code>Дополнительная информация</code>.
+      </li>
+    </ul>
+
+    <h2>Примеры корректных данных</h2>
+    <div class="example">
+      <p><strong>Пример 1:</strong> <span class="code">123-A1-Room1</span></p>
+      <ul>
+        <li><strong>Номер строки:</strong> 123</li>
+        <li><strong>Тип нагрузки:</strong> A1</li>
+        <li><strong>Комната:</strong> Room1</li>
+        <li><strong>Описание:</strong> отсутствует</li>
+      </ul>
+    </div>
+    <div class="example">
+      <p><strong>Пример 2:</strong> <span class="code">45-АБВ-Комната123 Описание задачи</span></p>
+      <ul>
+        <li><strong>Номер строки:</strong> 45</li>
+        <li><strong>Тип нагрузки:</strong> АБВ</li>
+        <li><strong>Комната:</strong> Комната123</li>
+        <li><strong>Описание:</strong> Описание задачи</li>
+      </ul>
+    </div>
+    <div class="example">
+      <p><strong>Пример 3:</strong> <span class="code">12-AB-Комната2 Some details here</span></p>
+      <ul>
+        <li><strong>Номер строки:</strong> 12</li>
+        <li><strong>Тип нагрузки:</strong> AB</li>
+        <li><strong>Комната:</strong> Комната2</li>
+        <li><strong>Описание:</strong> Some details here</li>
+      </ul>
+    </div>
+    <div class="example">
+      <p><strong>Пример 4:</strong> <span class="code">1-X1-123</span></p>
+      <ul>
+        <li><strong>Номер строки:</strong> 1</li>
+        <li><strong>Тип нагрузки:</strong> X1</li>
+        <li><strong>Комната:</strong> 123</li>
+        <li><strong>Описание:</strong> отсутствует</li>
+      </ul>
+    </div>
+
+    <h2>Примеры некорректных данных</h2>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">12A1-Room1</span></p>
+      <p><strong>Ошибка:</strong> отсутствует дефис между <code>12</code> и <code>A1</code>.</p>
+    </div>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">12345-ABCDE-Room</span></p>
+      <p><strong>Ошибка:</strong> <code>тип нагрузки</code> содержит более 3 символов.</p>
+    </div>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">-A1-Room1</span></p>
+      <p><strong>Ошибка:</strong> отсутствует <code>номер строки</code>.</p>
+    </div>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">12-A1- Описание задачи</span></p>
+      <p><strong>Ошибка:</strong> <code>комната</code> не может быть пустой.</p>
+    </div>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">12--Room1</span></p>
+      <p><strong>Ошибка:</strong> отсутствует <code>тип нагрузки</code>.</p>
+    </div>
+
+    <h2>Требования</h2>
+    <ul>
+      <li>Части строки должны быть разделены дефисами (<code>-</code>).</li>
+      <li><code>Номер строки</code>, <code>тип нагрузки</code> и <code>комната</code> обязательны, <code>описание</code>
+        — опционально.</li>
+      <li><code>Тип нагрузки</code> должен содержать от 1 до 3 символов.</li>
+      <li><code>Комната</code> должна состоять из букв, цифр или их комбинации.</li>
+    </ul>
+  </div>
+
+  <div id="example_tempalte_2" name="example">
+    <h1>Формат данных №2</h1>
+    <p><strong>3РОЗ1 ВВГНГ 3x1.5</strong></p>
+    <p>Строка должна состоять из четырех частей, строго в следующем порядке:</p>
+
+    <h2>Части строки</h2>
+    <ul>
+      <li><strong>Номер линии</strong>: число от <code>1</code> до <code>99</code>, представляющее идентификатор
+        линии.</li>
+      <li><strong>Тип нагрузки</strong>: последовательность букв (латинских или кириллических), обозначающая категорию
+        или тип.</li>
+      <li><strong>Номер комнаты</strong>: число от <code>1</code> до <code>99</code>, указывающее идентификатор комнаты.
+      </li>
+      <li><strong>Описание</strong> (опционально): дополнительная информация, начинающаяся с пробела. например тип
+        кабеля <strong>ВВГнг(А)-LS 3x1.5</strong></li>
+    </ul>
+
+    <h2>Примеры правильных данных</h2>
+    <div class="example">
+      <p><strong>Пример 1:</strong> <span class="code">12Загрузка34</span></p>
+      <ul>
+        <li><strong>Номер строки:</strong> 12</li>
+        <li><strong>Тип нагрузки:</strong> Загрузка</li>
+        <li><strong>Номер комнаты:</strong> 34</li>
+        <li><strong>Описание:</strong> отсутствует</li>
+      </ul>
+    </div>
+    <div class="example">
+      <p><strong>Пример 2:</strong> <span class="code">1Task9 Задача для выполнения</span></p>
+      <ul>
+        <li><strong>Номер строки:</strong> 1</li>
+        <li><strong>Тип нагрузки:</strong> Task</li>
+        <li><strong>Номер комнаты:</strong> 9</li>
+        <li><strong>Описание:</strong> Задача для выполнения</li>
+      </ul>
+    </div>
+    <div class="example">
+      <p><strong>Пример 3:</strong> <span class="code">42Объем8</span></p>
+      <ul>
+        <li><strong>Номер строки:</strong> 42</li>
+        <li><strong>Тип нагрузки:</strong> Объем</li>
+        <li><strong>Номер комнаты:</strong> 8</li>
+        <li><strong>Описание:</strong> отсутствует</li>
+      </ul>
+    </div>
+
+    <h2>Примеры некорректных данных</h2>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">012ABC34</span></p>
+      <p><strong>Ошибка:</strong> Номер строки не может начинаться с <code>0</code>.</p>
+    </div>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">10TestRoom34</span></p>
+      <p><strong>Ошибка:</strong> Отсутствует разделение между типом нагрузки и номером комнаты.</p>
+    </div>
+    <div class="error">
+      <p><strong>Пример:</strong> <span class="code">42 Загрузка 8</span></p>
+      <p><strong>Ошибка:</strong> Пробелы нарушают структуру строки.</p>
+    </div>
+
+    <h2>Требования</h2>
+    <ul>
+      <li>Все части строки должны идти подряд, без лишних пробелов (за исключением описания).</li>
+      <li>Тип нагрузки должен содержать только буквы.</li>
+      <li>Числовые значения (номер строки и номер комнаты) должны быть в диапазоне от <code>1</code> до <code>99</code>.
+      </li>
+    </ul>
+  </div>
+  </div>
+
+  <script>
+    function onload(selected_line_template) {
+      show_example(selected_line_template);
+      $('#line_template').val(selected_line_template).change();
+
+      $('#line_template').on('change', function () {
+        change_template(this.value);
+      });
+    }
+
+    function change_template(template_num) {
+      hide_success();
+      show_example(template_num);
+    }
+
+    function show_example(example_num) {
+      $('div[name^="example"]').each(function () {
+        var showid = "example_tempalte_" + example_num;
+        if (this.id == (showid)) {
+          this.hidden = false;
+        }
+        else {
+          this.hidden = true;
+        }
+      })
+    }
+
+    function save_settings() {
+      selected_num = $('#line_template').val();
+      sketchup.edit_template_setting(selected_num);
+
+      show_success();
+    }
+
+    function show_success() {
+      $('#result_status').show(1000, function () {
+        setTimeout(function () {
+          $('#result_status').hide(500);
+        }, 5000);
+      });
+    }
+
+    function hide_success() {
+      $('#result_status').hide();
+    }
+
+    $(document).ready(function () {
+      window.location = 'skp:dialog_ready';
+    });
+  </script>
+</body>
+
+</html>

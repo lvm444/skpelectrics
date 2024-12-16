@@ -1,0 +1,71 @@
+name: Create Extension RBZ file
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - main
+
+      
+jobs:
+  build-extension:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install zip
+      run: sudo apt-get install -y zip
+
+    - name: get tag params
+      uses: olegtarasov/get-tag@v2.1.4
+      id: tagName
+      with:
+          tagRegex: '^(?<type>[a-zA-Z0-9]+)_(?<version>\d+\.\d+)$'
+      
+    - name: Determine version number
+      id: version
+      run: |
+        echo "1" > major_version.txt # Set major version manually
+        echo $GIT_TAG_NAME
+        echo "version ${{ steps.tagName.outputs.version }}"
+        echo "type ${{ steps.tagName.outputs.type }}"
+        echo "${{ github.run_number }}" > minor_version.txt # Use the GitHub run number for minor version
+        echo "major=1" >> $GITHUB_ENV
+        echo "minor=${{ github.run_number }}" >> $GITHUB_ENV
+
+    - name: Zip 'src' folder
+      run: cd src && zip -r ../skpelectrics.rbz ./*
+
+    - name: publish
+      uses: actions/upload-artifact@v3
+      with:
+        name: skpelectrics.rbz
+        path: skpelectrics.rbz
+    - name: release
+      if: steps.tagName.outputs.type == 'release'
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: release_${{ steps.tagName.outputs.version }}
+        tag_name: ${{ github.ref }}
+        body: "relase ${{ github.ref }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+    # Step 5: Upload artifact to the release
+    - name: Upload Release Asset
+      if: steps.tagName.outputs.type == 'release'
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: skpelectrics.rbz
+        asset_name: skpelectrics.rbz
+        asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+  
+

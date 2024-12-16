@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Отчет: Данные линий</title>
+
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <script src="./js/jquery.tablesorter.min.js"></script>
+  <link rel="stylesheet" href="./css/skpelectrics_css.css">
+</head>
+
+<body>
+  <h1>Отчет: Данные линий</h1>
+
+  <button class="copy-btn" onclick="copyTableToClipboard('#dataTable')">Скопировать таблицу</button>
+
+  <table id="dataTable" class="tablesorter">
+    <thead>
+      <tr>
+        <th>Код линии</th>
+        <th>Помещение</th>
+        <th>Описание</th>
+        <th>Тип</th>
+        <th>Длина кабеля (м)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Данные будут вставлены здесь -->
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <h2>Итоги по типам</h2>
+    <table id="tbl_totals_type" class="tablesorter">
+      <thead>
+        <tr>
+          <th>Тип</th>
+          <th>Длина кабеля (м)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Данные будут вставлены здесь -->
+      </tbody>
+    </table>
+
+    <h2>Итоги по помещениям</h2>
+    <table id="tbl_totals_room" class="tablesorter">
+      <thead>
+        <tr>
+          <th>Помещение</th>
+          <th>Длина кабеля (м)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Данные будут вставлены здесь -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    function populateReport(data, totalsType, totalsRoom) {
+      const items = JSON.parse(data);
+      const $dataTableBody = $('#dataTable tbody');
+
+      const $tableBodyCols = $('#dataTable tr');
+
+      var wtypes = Object.keys(totalsType);
+
+      wtypes.forEach(type => {
+        $tableBodyCols.append('<th>' + type + '</th>');
+      });
+
+      $dataTableBody.empty();
+      items.forEach(line => {
+        const $row = $('<tr>')
+          .append($('<td>').text(line.line_number))
+          .append($('<td>').text(line.room))
+          .append($('<td>').text(line.description))
+          .append($('<td>').text(line.type))
+          .append($('<td>').text(formatNumber(line.length)));
+
+        var wirings = Object.keys(line.wire_type_sums);
+        wtypes.forEach(tp => {
+          $row.append($('<td>').text(round_meters(line.wire_type_sums[tp])));
+        });
+        $dataTableBody.append($row);
+      });
+
+      /*const $totalsTypeBody = $('#tbl_totals_type tbody');
+      $totalsTypeBody.empty();
+      totalsType.forEach(([type, length]) => {
+        const $row = $('<tr>')
+          .append($('<td>').text(type))
+          .append($('<td>').text(formatNumber(length)));
+        $totalsTypeBody.append($row);
+      });
+
+      const $totalsRoomBody = $('#tbl_totals_room tbody');
+      $totalsRoomBody.empty();
+      totalsRoom.forEach(([room, length]) => {
+        const $row = $('<tr>')
+          .append($('<td>').text(room))
+          .append($('<td>').text(formatNumber(length)));
+        $totalsRoomBody.append($row);
+      });*/
+
+      // Reinitialize tablesorter only after ensuring data is populated
+      setTimeout(() => {
+        $('#dataTable').tablesorter();
+        $('#tbl_totals_type').tablesorter();
+        $('#tbl_totals_room').tablesorter();
+      }, 0);
+    }
+
+    function formatNumber(num) {
+      return num != null ? Number(num.toFixed(3)).toString().replace('.', ',') : '';
+    }
+
+    function copyTableToClipboard(tableSelector) {
+      const $table = $(tableSelector);
+      let tableText = '';
+
+      $table.find('tr').each(function () {
+        const $cells = $(this).find('th, td');
+        const rowText = $cells.map(function () {
+          return $(this).text().trim();
+        }).get().join('\t');
+        tableText += rowText + '\n';
+      });
+
+      const textarea = document.createElement('textarea');
+      textarea.value = tableText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      alert('Таблица скопирована в буфер обмена!');
+    }
+
+    function round_meters(num) {
+      if (num != null) {
+        return Number((num).toFixed(3)).toString().replace(".", ",")
+      }
+      else {
+        return ""
+      }
+
+    }
+
+    $(document).ready(function () {
+      window.location = 'skp:dialog_ready';
+    });
+  </script>
+</body>
+
+</html>

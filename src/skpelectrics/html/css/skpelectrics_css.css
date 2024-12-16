@@ -1,0 +1,146 @@
+/* General Body Styling */
+body {
+  font-family: "Segoe UI", sans-serif;
+  margin: 20px;
+  background-color: #f4f7fb;
+  color: #2d3436;
+  line-height: 1.6;
+}
+
+/* Headings */
+h1,
+h2 {
+  color: #2c3e50;
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 15px;
+  font-size: 20px;
+}
+
+h1 {
+  font-size: 24px;
+  border-bottom: 2px solid #007acc;
+  padding-bottom: 5px;
+}
+
+/* Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+th,
+td {
+  border: 1px solid #dfe6e9;
+  padding: 10px;
+  text-align: left;
+  font-size: 14px;
+  vertical-align: middle;
+  color: #2d3436;
+}
+
+th {
+  background-color: #007acc;
+  color: white;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+tr:hover {
+  background-color: #74b9ff;
+  color: #ffffff;
+}
+
+/* Forms and Buttons */
+label {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 14px;
+  color: #2d3436;
+}
+
+input[type="text"],
+select {
+  padding: 10px;
+  margin: 4px 0;
+  border: 1px solid #dfe6e9;
+  border-radius: 4px;
+  font-size: 14px;
+  width: calc(100% - 24px);
+  background-color: #ffffff;
+  color: #2d3436;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+input:focus,
+select:focus {
+  border-color: #007acc;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 122, 204, 0.5);
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #005c99;
+}
+
+/* Examples and Errors */
+.example,
+.error {
+  background-color: #ffffff;
+  border: 1px solid #dfe6e9;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  border-radius: 4px;
+}
+
+.example {
+  border-left: 4px solid #4caf50;
+}
+
+.error {
+  border-left: 4px solid #e74c3c;
+}
+
+.code {
+  font-family: "Courier New", Courier, monospace;
+  background-color: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #2d3436;
+}
+
+/* Status Messages */
+#result_status {
+  color: #2ecc71;
+  display: none;
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  padding: 10px;
+  background-color: #eafaf1;
+  border: 1px solid #2ecc71;
+  border-radius: 4px;
+  margin-top: 10px;
+}

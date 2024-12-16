@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Table Data</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Include jQuery -->
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <script src="./js/jquery.tablesorter.min.js"></script>
+  <link rel="stylesheet" href="./css/skpelectrics_css.css">
+</head>
+
+<body>
+  <h1>Выбор способа прокладки провода</h1>
+  <div id="choose_wiring">
+    <label for="wire-select">Выбери способ прокладки кабеля:</label>
+    <select id="wire-select" onselect="change_wtype">
+    </select>
+    <label for="wire-select">или введи текстом:</label>
+    <input type="text" name="txt_wiring_type" />
+    <button type="button" onclick="edit_wiring_type()">OK</button>
+  </div>
+
+  <script>
+    // Function to populate the table with data using jQuery
+    function onload(selected_wiring_type, wtypes) {
+      const $wiring_type_input = $('#choose_wiring input');
+
+      $wiring_type_input.empty();
+      $wiring_type_input.val(selected_wiring_type)
+
+      const $wtypes_combobox = $('#wire-select');
+
+      const wtypesarray = JSON.parse(wtypes);
+
+      var null_option = new Option("", null);
+      $wtypes_combobox.append(null_option);
+      wtypesarray.forEach(type => {
+        var option = new Option(type, type);
+        if (type == selected_wiring_type) {
+          option.selected = true;
+        }
+        $wtypes_combobox.append(option);
+      });
+
+      $wtypes_combobox.on('change', function () {
+        change_wtype(this.value);
+      });
+
+    }
+
+    function change_wtype(value) {
+      const $wtypes_combobox = $('#wire-select');
+
+      const $wiring_type_input = $('#choose_wiring input');
+
+      $wiring_type_input.empty();
+      $wiring_type_input.val(value)
+    }
+
+    function edit_wiring_type() {
+      const $wiring_type_input = $('#choose_wiring input');
+      wtype = $wiring_type_input.val();
+      sketchup.edit_wiring_type(wtype);
+    }
+
+
+    // Notify Ruby to send the table data
+    $(document).ready(function () {
+      window.location = 'skp:dialog_ready';
+    });
+  </script>
+</body>
+
+</html>
