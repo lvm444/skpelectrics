@@ -40,7 +40,7 @@ jobs:
       run: cd src && zip -r ../skpelectrics.rbz ./*
 
     - name: publish
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: skpelectrics.rbz
         path: skpelectrics.rbz
