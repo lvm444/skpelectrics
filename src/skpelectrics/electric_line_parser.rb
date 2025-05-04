@@ -10,7 +10,7 @@ module Lvm444Dev
 
         case pattern_number
         when "1"
-          pattern = /^(?<line_number>\d+)-(?<load_type>[А-ЯA-Z\d]{1,3})-(?<room>[А-яA-Za-z\d]+)\s*(?: (?<description>.+))?$/
+          pattern = /^(?<line_number>\d+)-(?<load_type>[А-ЯA-Z\d+(),]{1,10})-(?<room>[А-яA-Za-z\d]+)\s*(?: (?<description>.+))?$/
         when "2"
           pattern = /^(?<line_number>[1-9][0-9]?)(?<load_type>[А-Яа-яA-Za-z]+)(?<room>[1-9][0-9]?)(?<description>\s.*)?$/
         else
