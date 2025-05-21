@@ -137,13 +137,65 @@ module Lvm444Dev
       # Вставка
       model.start_operation("Вставка с ориентацией", true)
       instance = model.active_entities.add_instance(definition, final_transform)
-      model.commit_operation
+
+      ins_bounds = instance.bounds
+
+      # 1. Получаем готовый вектор смещения (уже с учетом расстояния)
+      # 1. Создаем копию вектора направления
+      offset_vector = Geom::Vector3d.new(dir_vector.x, dir_vector.y, dir_vector.z)
+
+      # 2. Устанавливаем длину через метод length=
+      offset_vector.length = (ins_bounds.height.to_l.to_f/2)  # Явное задание длины в дюймах
+
+      # 2. Создаем и применяем трансформацию
+      transform = Geom::Transformation.translation(offset_vector)
+      instance.transform!(transform)
 
       instance
     rescue => e
       model.abort_operation if model.respond_to?(:abort_operation)
+      puts "Ошибка: #{e.message}"
+      puts "stack: #{e.backtrace.join("\n\t")}"
       UI.messagebox("Ошибка: #{e.message}")
       nil
+    end
+  end
+
+  # Конвертация смещения в числовое значение
+  def self.convert_offset(offset)
+    begin
+      # Если offset уже числовой (без единиц)
+      return offset.to_f if offset.is_a?(Numeric)
+
+      # Если offset с единицами измерения (500.mm)
+      return offset.to_l.to_f if offset.respond_to?(:to_l)
+
+      # Если строка (например "500" или "500mm")
+      if offset.is_a?(String)
+        return offset.to_f if offset.match?(/^\d+\.?\d*$/)
+        return offset.gsub(/[^\d\.]/, '').to_f
+      end
+
+      0.0 # Значение по умолчанию
+    rescue => e
+      puts "Ошибка конвертации смещения: #{e.message}"
+      puts "Стек вызовов:\n#{e.backtrace.join("\n")}"
+      0.0
+    end
+  end
+
+  # Безопасное вычисление вектора смещения
+  def self.calculate_offset_vector(dir_vector, offset)
+    begin
+      # Конвертируем смещение в число
+      offset_value = convert_offset(offset)
+
+      # Умножаем нормализованный вектор на число (без единиц измерения)
+      dir_vector.normalize * offset_value
+    rescue => e
+      puts "Ошибка расчета вектора смещения: #{e.message}"
+      puts "Стек вызовов:\n#{e.backtrace.join("\n")}"
+      Geom::Vector3d.new(0, 0, 0) # Нулевой вектор при ошибке
     end
   end
 
@@ -195,7 +247,7 @@ module Lvm444Dev
       puts "> #{entity}"
     end
 
-    component = selection.find {|e| e.is_a?(Sketchup::ComponentInstance)}
+    component = selection.find {|e| e.is_a?(Sketchup::ComponentInstance) || e.is_a?(Sketchup::Group)}
     puts "component #{component}"
 
     if !component
