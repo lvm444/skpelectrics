@@ -60,7 +60,7 @@
   </div>
 
   <script>
-    function populateReport(data, totalsType, totalsRoom) {
+    function populateReport(data, totalsType, lines_summary) {
       const items = JSON.parse(data);
       const $dataTableBody = $('#dataTable tbody');
 
@@ -88,23 +88,27 @@
         $dataTableBody.append($row);
       });
 
-      /*const $totalsTypeBody = $('#tbl_totals_type tbody');
+      const $totalsTypeBody = $('#tbl_totals_type tbody');
       $totalsTypeBody.empty();
-      totalsType.forEach(([type, length]) => {
+
+      var types = Object.keys(lines_summary.lines_type_summary).sort();
+      types.forEach(type => {
         const $row = $('<tr>')
           .append($('<td>').text(type))
-          .append($('<td>').text(formatNumber(length)));
+          .append($('<td>').text(formatNumber(lines_summary.lines_type_summary[type])));
         $totalsTypeBody.append($row);
       });
 
       const $totalsRoomBody = $('#tbl_totals_room tbody');
       $totalsRoomBody.empty();
-      totalsRoom.forEach(([room, length]) => {
+
+      var rooms = Object.keys(lines_summary.lines_room_summary).sort();
+      rooms.forEach(room => {
         const $row = $('<tr>')
           .append($('<td>').text(room))
-          .append($('<td>').text(formatNumber(length)));
+          .append($('<td>').text(formatNumber(lines_summary.lines_room_summary[room])));
         $totalsRoomBody.append($row);
-      });*/
+      });
 
       // Reinitialize tablesorter only after ensuring data is populated
       setTimeout(() => {

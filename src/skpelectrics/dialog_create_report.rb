@@ -19,12 +19,30 @@ module Lvm444Dev
 
           lines_sorted = lines.sort_by { |item| [item.room, item.type] }
 
+          lines_summary = calculate_summary(lines)
+
           validate_line_number_collisions(lines_sorted)
 
-          dialog.execute_script("populateReport('#{lines_sorted.to_json}',#{Lvm444Dev::SketchupUtils.get_wiring_types(lines).to_json})")
+          dialog.execute_script("populateReport('#{lines_sorted.to_json}',#{Lvm444Dev::SketchupUtils.get_wiring_types(lines).to_json},#{lines_summary.to_json})")
         end
 
         dialog
+      end
+
+      def self.calculate_summary(lines)
+
+        lines_type_summary = Hash.new()
+        lines_room_summary = Hash.new()
+
+        lines.each do |line|
+          lines_type_summary[line.type] =  lines_type_summary.fetch(line.type,0).to_f + line.length
+          lines_room_summary[line.room] =  lines_type_summary.fetch(line.room,0).to_f + line.length
+        end
+
+        {
+          :lines_type_summary => lines_type_summary,
+          :lines_room_summary => lines_room_summary,
+        }
       end
 
       def self.validate_line_number_collisions(lines)
