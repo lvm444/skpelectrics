@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Редактор справочника материалов</title>
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <link rel="stylesheet" href="./css/skpelectrics_css.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    button {
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 5px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    button.secondary {
+      background-color: #2196F3;
+    }
+
+    button.danger {
+      background-color: #f44336;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .line-types-table {
+      margin-bottom: 20px;
+    }
+
+    .selected-line {
+      background-color: #e6f7ff;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    button.export {
+      background-color: #ff9800;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Редактирование справочника материалов</h1>
+
+    <div class="form-group">
+      <button type="button" onclick="document.getElementById('file-input').click()" class="secondary">
+        Загрузить конфиг из файла
+      </button>
+      <input type="file" id="file-input" class="file-input" accept=".json" onchange="loadConfigFromFile(this.files)">
+
+      <button type="button" onclick="exportToFile()" class="export">
+        Экспорт в файл
+      </button>
+
+      <button type="button" onclick="showAddLineTypeForm()" class="secondary">
+        Добавить новый тип линии
+      </button>
+
+      <div id="add-line-form" style="display:none; margin-top:10px;">
+        <input type="text" id="new-line-type" placeholder="Введите новый тип линии">
+        <button type="button" onclick="addLineType()">Добавить</button>
+        <button type="button" onclick="hideAddLineTypeForm()" class="danger">Отмена</button>
+      </div>
+    </div>
+
+    <h2>Список типов линий</h2>
+    <table class="line-types-table">
+      <thead>
+        <tr>
+          <th>Тип линии</th>
+          <th>Количество материалов</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody id="line-types-table-body"></tbody>
+    </table>
+
+    <div id="materials-editor" style="display:none;">
+      <h2>Материалы для линии: <span id="current-line-type"></span></h2>
+
+      <table id="materials-table">
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>Наименование материала</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="form-group">
+        <input type="text" id="new-material" placeholder="Введите наименование материала">
+        <button type="button" onclick="addMaterial()">Добавить материал</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" onclick="saveDictionary()" class="primary">Сохранить справочник</button>
+      <button type="button" onclick="closeDialog()">Закрыть</button>
+    </div>
+  </div>
+
+  <script>
+    let materialsDictionary = {};
+    let currentLineType = '';
+
+    // Инициализация формы при загрузке
+    function onLoad(dictionaryData) {
+      try {
+        materialsDictionary = JSON.parse(dictionaryData) || {};
+        populateLineTypesTable();
+
+        // Если есть типы линий, выбираем первый
+        if (Object.keys(materialsDictionary).length > 0) {
+          selectLineType(Object.keys(materialsDictionary)[0]);
+        }
+      } catch (e) {
+        console.error("Ошибка загрузки данных:", e);
+        materialsDictionary = {};
+      }
+    }
+
+    // Заполнение таблицы типов линий
+    function populateLineTypesTable() {
+      const $tbody = $('#line-types-table-body');
+      $tbody.empty();
+
+      Object.entries(materialsDictionary).forEach(([lineType, materials]) => {
+        const row = `
+          <tr onclick="selectLineType('${lineType}')" id="line-type-${lineType}">
+            <td>${lineType}</td>
+            <td>${Object.keys(materials).length}</td>
+            <td>
+              <button onclick="event.stopPropagation(); removeLineType('${lineType}')" class="danger">
+                Удалить
+              </button>
+            </td>
+          </tr>
+        `;
+        $tbody.append(row);
+      });
+
+      // Подсвечиваем выбранную строку
+      if (currentLineType) {
+        $(`#line-type-${currentLineType}`).addClass('selected-line');
+      }
+    }
+
+    // Выбор типа линии для редактирования
+    function selectLineType(lineType) {
+      currentLineType = lineType;
+      $('#current-line-type').text(lineType);
+      $('#materials-editor').show();
+      populateMaterialsTable();
+
+      // Обновляем выделение в таблице
+      $('.line-types-table tr').removeClass('selected-line');
+      $(`#line-type-${lineType}`).addClass('selected-line');
+    }
+
+    // Заполнение таблицы материалов
+    function populateMaterialsTable() {
+      const $tbody = $('#materials-table tbody');
+      $tbody.empty();
+
+      if (!materialsDictionary[currentLineType]) {
+        materialsDictionary[currentLineType] = {};
+      }
+
+      Object.entries(materialsDictionary[currentLineType]).forEach(([num, material]) => {
+        const row = `
+          <tr>
+            <td>${num}</td>
+            <td>${material}</td>
+            <td>
+              <button onclick="editMaterial(${num})">Изменить</button>
+              <button onclick="removeMaterial(${num})" class="danger">Удалить</button>
+            </td>
+          </tr>
+        `;
+        $tbody.append(row);
+      });
+    }
+
+    // Показать форму добавления типа линии
+    function showAddLineTypeForm() {
+      $('#add-line-form').show();
+      $('#new-line-type').focus();
+    }
+
+    // Скрыть форму добавления типа линии
+    function hideAddLineTypeForm() {
+      $('#add-line-form').hide();
+      $('#new-line-type').val('');
+    }
+
+    // Добавление нового типа линии
+    function addLineType() {
+      const newType = $('#new-line-type').val().trim();
+      if (!newType) return;
+
+      if (!materialsDictionary[newType]) {
+        materialsDictionary[newType] = {};
+        hideAddLineTypeForm();
+        populateLineTypesTable();
+        selectLineType(newType);
+      } else {
+        alert("Тип линии уже существует!");
+      }
+    }
+
+    // Удаление типа линии
+    function removeLineType(lineType) {
+      if (confirm(`Удалить тип линии "${lineType}" и все связанные материалы?`)) {
+        delete materialsDictionary[lineType];
+
+        if (currentLineType === lineType) {
+          currentLineType = '';
+          $('#materials-editor').hide();
+        }
+
+        populateLineTypesTable();
+      }
+    }
+
+    // Добавление материала
+    function addMaterial() {
+      const material = $('#new-material').val().trim();
+      if (!material || !currentLineType) return;
+
+      // Находим следующий доступный номер
+      let nextNum = 1;
+      while (materialsDictionary[currentLineType][nextNum]) {
+        nextNum++;
+      }
+
+      materialsDictionary[currentLineType][nextNum] = material;
+      $('#new-material').val('');
+      populateMaterialsTable();
+      populateLineTypesTable(); // Обновляем счетчик материалов
+    }
+
+    // Редактирование материала
+    function editMaterial(num) {
+      const newName = prompt("Введите новое название материала:", materialsDictionary[currentLineType][num]);
+      if (newName !== null && newName.trim() !== '') {
+        materialsDictionary[currentLineType][num] = newName.trim();
+        populateMaterialsTable();
+      }
+    }
+
+    // Удаление материала
+    function removeMaterial(num) {
+      if (confirm("Удалить этот материал?")) {
+        delete materialsDictionary[currentLineType][num];
+        populateMaterialsTable();
+        populateLineTypesTable(); // Обновляем счетчик материалов
+      }
+    }
+
+    // Загрузка конфигурации из файла
+    function loadConfigFromFile(files) {
+      if (files.length === 0) return;
+
+      const file = files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        try {
+          const jsonData = JSON.parse(e.target.result);
+          materialsDictionary = jsonData;
+          currentLineType = '';
+
+          populateLineTypesTable();
+          $('#materials-editor').hide();
+
+          if (Object.keys(materialsDictionary).length > 0) {
+            selectLineType(Object.keys(materialsDictionary)[0]);
+          }
+
+          alert("Конфигурация успешно загружена из файла!");
+        } catch (e) {
+          alert("Ошибка при чтении файла: " + e.message);
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    // Экспорт справочника в файл
+    function exportToFile() {
+      if (Object.keys(materialsDictionary).length === 0) {
+        alert("Справочник пуст, нечего экспортировать!");
+        return;
+      }
+
+      try {
+        // Создаем JSON строку с отступами для лучшей читаемости
+        const jsonData = JSON.stringify(materialsDictionary, null, 2);
+
+        // Создаем Blob с данными
+        const blob = new Blob([jsonData], { type: 'application/json' });
+
+        // Создаем ссылку для скачивания
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Предлагаем имя файла с текущей датой
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        a.download = `electrical_materials_${dateStr}.json`;
+
+        // Инициируем скачивание
+        document.body.appendChild(a);
+        a.click();
+
+        // Очищаем
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+      } catch (e) {
+        alert("Ошибка при экспорте: " + e.message);
+      }
+    }
+
+    // Сохранение справочника
+    function saveDictionary() {
+      sketchup.saveMaterialsDictionary(JSON.stringify(materialsDictionary));
+    }
+
+    // Закрытие диалога
+    function closeDialog() {
+      sketchup.closeDialog();
+    }
+
+    // Уведомление Ruby о готовности диалога
+    $(document).ready(function () {
+      window.location = 'skp:dialog_ready';
+    });
+  </script>
+</body>
+
+</html>

@@ -31,17 +31,32 @@ module Lvm444Dev
 
       def self.calculate_summary(lines)
 
+        model = Sketchup.active_model
+        dict = Lvm444Dev::ElectricalMaterialsDictionary.new(model)
+
         lines_type_summary = Hash.new()
         lines_room_summary = Hash.new()
+        materials_summary = Hash.new()
 
         lines.each do |line|
           lines_type_summary[line.type] =  lines_type_summary.fetch(line.type,0).to_f + line.length
           lines_room_summary[line.room] =  lines_type_summary.fetch(line.room,0).to_f + line.length
+
+          materials_hash = dict.get_materials_by_type(line.type)
+          if (materials_hash != nil)
+            materials_hash.each do |material_id,material_desc|
+              materials_summary[material_desc] =  materials_summary.fetch(material_desc,0).to_f + line.length
+            end
+          else
+            unknown_material = "Не определено - #{line.type}"
+            materials_summary[unknown_material] =  materials_summary.fetch(unknown_material,0).to_f + line.length
+          end
         end
 
         {
           :lines_type_summary => lines_type_summary,
           :lines_room_summary => lines_room_summary,
+          :materials_summary => materials_summary
         }
       end
 
