@@ -21,7 +21,7 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
       }
 
-      menu.add_item('Сформироватьыыыыы кабельный журнал') {
+      menu.add_item('Сформировать кабельный журнал') {
         Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog
       }
 
