@@ -21,12 +21,16 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
       }
 
-      menu.add_item('Сформировать кабельный журнал') {
+      menu.add_item('Сформироватьыыыыы кабельный журнал') {
         Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog
       }
 
       menu.add_item('Указать способ прокладки кабеля') {
         Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog
+      }
+
+      menu.add_item('Отредактировать справочник материалов') {
+        Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog
       }
       file_loaded(__FILE__)
     end
