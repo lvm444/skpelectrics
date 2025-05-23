@@ -26,9 +26,7 @@
 - В меню выберите:  
   **Extensions -> skpelectrics -> Сформировать кабельный журнал**.
 - Пример отчета:  
-  ![Пример отчета](https://github.com/lvm444/skpelectrics/blob/main/report_example.png).
-
-  ![Пример кабельного журнала в SketchUp]([report.jpg](https://github.com/lvm444/skpelectrics/blob/main/report_example.png) "Плагин для формирования кабельного журнала")
+  ![Пример кабельного журнала](https://github.com/lvm444/skpelectrics/blob/main/report_example.png).
 
 ### Копирование данных
 - Нажмите кнопку **"Скопировать таблицу"** для переноса отчета в Excel, Google Таблицы или другие редакторы.
