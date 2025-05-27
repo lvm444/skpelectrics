@@ -14,15 +14,15 @@ module Lvm444Dev
 
           # Add action callback to send data
         dialog.add_action_callback("dialog_ready") do |action_context|
-          puts "dialog ready!!!"
-          #dialog.execute_script("print_report(#{items.to_json},#{totals[:lengths_by_type].to_a.to_json},#{totals[:lengths_by_rooms].to_a.to_json}),#{wiring_types.to_a.to_json}")
-
           types = Lvm444Dev::SketchupUtils.search_wtypes
 
+          selectionType = Lvm444Dev::SelectionManager.get_one_level_selection_type
+
+          puts "selectionType!! #{selectionType.to_json}"
+
           wiring_type = Lvm444Dev::SketchupUtils.get_selected_wiring_type()
-          puts "seleted type #{wiring_type}"
-          puts "types  #{types.keys().to_json}"
-          dialog.execute_script("onload('#{wiring_type}','#{types.keys().to_json}')")
+
+          dialog.execute_script("onload('#{wiring_type}','#{types.keys().to_json}',#{selectionType.to_json})")
         end
 
         dialog
@@ -42,7 +42,21 @@ module Lvm444Dev
       end
 
       def self.edit_wiring_type(wtype)
-        Lvm444Dev::SketchupUtils.edit_wiring_type(wtype)
+
+        selectionType = Lvm444Dev::SelectionManager.get_one_level_selection_type
+
+        puts "selectionType #{selectionType.to_json}"
+
+        if (selectionType[:selection_type] == Lvm444Dev::SelectionManager::SELECTED_EDGES)
+          puts "selected edges"
+          Lvm444Dev::SkpElectricsWireType.edit_wiring_type(wtype)
+        elsif (selectionType[:selection_type] == Lvm444Dev::SelectionManager::SELECTED_MIX)
+          puts "selected mix"
+        elsif (selectionType[:selection_type] == Lvm444Dev::SelectionManager::SELECTED_ELECTRIC_LINES)
+          lines = Lvm444Dev::SelectionManager.get_selected_electric_lines
+          puts "selected electric lines!! #{lines}"
+          Lvm444Dev::SkpElectricsWireType.create_wire_types_by_electric_lines(wtype,lines)
+        end
         @dialog.close
       end
 

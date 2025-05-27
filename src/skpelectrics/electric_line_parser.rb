@@ -61,6 +61,10 @@ module Lvm444Dev
       return "#{@group.name}"
     end
 
+    def get_group
+      return @group
+    end
+
     def length
       Lvm444Dev::SketchupUtils.calculate_length_by_entity(@group)
     end
