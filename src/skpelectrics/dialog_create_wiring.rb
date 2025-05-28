@@ -20,7 +20,7 @@ module Lvm444Dev
 
           puts "selectionType!! #{selectionType.to_json}"
 
-          wiring_type = Lvm444Dev::SketchupUtils.get_selected_wiring_type()
+          wiring_type = Lvm444Dev::SkpElectricsWireType.get_selected_wiring_type()
 
           dialog.execute_script("onload('#{wiring_type}','#{types.keys().to_json}',#{selectionType.to_json})")
         end
