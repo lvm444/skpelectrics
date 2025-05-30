@@ -10,10 +10,18 @@
   <script src="./js/jquery-3.6.0.min.js"></script>
   <script src="./js/jquery.tablesorter.min.js"></script>
   <link rel="stylesheet" href="./css/skpelectrics_css.css">
+  <div hidden style="">Выбранн смешанный набор </div>
 </head>
 
 <body>
   <h1>Выбор способа прокладки провода</h1>
+
+  <!-- Блок для отображения предупреждения -->
+  <div id="warning-block"
+    style="display: none; color: red; background-color: #ffeeee; padding: 10px; margin: 10px 0; border: 1px solid red; border-radius: 4px;">
+    <p id="warning-message"></p>
+  </div>
+
   <div id="choose_wiring">
     <label for="wire-select">Выбери способ прокладки кабеля:</label>
     <select id="wire-select" onselect="change_wtype">
@@ -24,6 +32,25 @@
   </div>
 
   <script>
+    // Функция для отображения предупреждения и блокировки сохранения
+    function showWarning(message, blockSave = true) {
+      const warningBlock = $('#warning-block');
+      const warningMessage = $('#warning-message');
+
+      warningMessage.text(message);
+      warningBlock.show();
+
+      // Сохраняем состояние блокировки в переменной
+      window.blockSave = blockSave;
+    }
+
+    // Функция для скрытия предупреждения и разблокировки сохранения
+    function hideWarning() {
+      const warningBlock = $('#warning-block');
+      warningBlock.hide();
+      window.blockSave = false;
+    }
+
     // Function to populate the table with data using jQuery
     function onload(selected_wiring_type, wtypes, selected_stats) {
       const $wiring_type_input = $('#choose_wiring input');
@@ -53,23 +80,35 @@
 
     function change_wtype(value) {
       const $wtypes_combobox = $('#wire-select');
-
       const $wiring_type_input = $('#choose_wiring input');
 
       $wiring_type_input.empty();
       $wiring_type_input.val(value)
+
+      // Проверяем значение и показываем предупреждение при необходимости
+      if (value === 'недопустимый_способ') {
+        showWarning('Выбран недопустимый способ прокладки! Сохранение невозможно.', true);
+      } else {
+        hideWarning();
+      }
     }
 
     function edit_wiring_type() {
+      if (window.blockSave) {
+        showWarning('Невозможно сохранить из-за ошибки в выборе способа прокладки!');
+        return;
+      }
+
       const $wiring_type_input = $('#choose_wiring input');
       wtype = $wiring_type_input.val();
       sketchup.edit_wiring_type(wtype);
     }
 
-
     // Notify Ruby to send the table data
     $(document).ready(function () {
       window.location = 'skp:dialog_ready';
+      // Инициализируем переменную блокировки
+      window.blockSave = false;
     });
   </script>
 </body>
