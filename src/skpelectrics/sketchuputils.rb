@@ -90,6 +90,28 @@ module Lvm444Dev
 
     end
 
+    def self.is_one_group_selected()
+      model = Sketchup.active_model
+      selection = model.selection
+
+      if selection.length == 1 && selection.first.is_a?(Sketchup::Group)
+        return true
+      end
+
+      return false
+    end
+
+    def self.is_one_or_more_entities_selected()
+      model = Sketchup.active_model
+      selection = model.selection
+
+      if selection.length > 0
+        return true
+      end
+
+      return false
+    end
+
     # dynamic attributes
 
     def self.get_entity_attribute(entity,attribute_name)
@@ -171,6 +193,15 @@ module Lvm444Dev
 
     def self.create_wiring_method_group(group_name, wiring_meth)
       create_specific_subgroupe(group_name,{:wiring=>wiring_meth})
+    end
+
+    def self.get_selected_wiring_type()
+      if (is_one_group_selected())
+        group = get_selected_group()
+        return get_entity_attribute(group,"wiring")
+      elsif (is_one_or_more_entities_selected())
+        return ""
+      end
     end
 
   end
