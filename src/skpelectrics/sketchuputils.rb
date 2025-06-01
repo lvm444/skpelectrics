@@ -7,32 +7,6 @@ module Lvm444Dev
 
     INCH_SCALE ||= 0.0254
 
-    def self.calculate_length_by_attribute(group,attribute_name)
-      scale = 0.0254
-      entities = group.entities
-
-      attribute_sums = Hash.new(0.0) # Default to 0.0 for any new key
-      entities.each do |entity|
-
-        attribute_value = entity.get_attribute("dynamic_attributes", "wiring")
-        next if attribute_value==nil
-
-        entity_length = 0
-        if entity.is_a?(Sketchup::Edge)
-          entity_length += entity.length
-        elsif entity.is_a?(Sketchup::Group)
-          entity.entities.grep(Sketchup::Edge).each do |edge|
-            entity_length += edge.length
-          end
-        end
-
-        attribute_sums[attribute_value] += entity_length * scale
-
-      end
-
-      attribute_sums
-    end
-
     # calculation
 
     def self.calculate_length_by_entity(entity)

@@ -29,7 +29,9 @@ module Lvm444Dev
       lines.each do |line|
         # Create new subgroup INSIDE the parent group
 
+        next unless line.valid?
 
+        next if line.is_a?(Sketchup::ConstructionPoint)
         # CORRECT WAY to move the line:
         # 1. Convert edge to a curve (array of edges)
         curve = [line]
@@ -37,10 +39,6 @@ module Lvm444Dev
         new_edges = subgroup.entities.add_curve(line.start.position, line.end.position)
         # 3. Delete original edge
         parent_group.entities.erase_entities(line)
-
-        # Optional: Add endpoints as construction points
-        subgroup.entities.add_cpoint(new_edges.first.start.position)
-        subgroup.entities.add_cpoint(new_edges.first.end.position)
       end
 
       if (attributes.length>0)

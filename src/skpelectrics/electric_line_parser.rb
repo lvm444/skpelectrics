@@ -70,7 +70,7 @@ module Lvm444Dev
     end
 
     def wire_type_sums
-      return Lvm444Dev::SketchupUtils.calculate_length_by_attribute(@group,"wiring")
+      return Lvm444Dev::TagsManager.calculate_length_by_attribute(@group,"wiring")
     end
 
     private

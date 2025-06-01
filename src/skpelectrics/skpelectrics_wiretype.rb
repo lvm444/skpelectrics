@@ -36,8 +36,10 @@ module Lvm444Dev
 
       edges = group.entities.grep(Sketchup::Edge)
 
+      non_group_entities = group.entities.select { |e| !e.is_a?(Sketchup::Group) }
+
       if edges.count>0
-        Lvm444Dev::SkpElectricsGroupManager.create_line_subgroups(group,wtype,edges,{:wiring=>wtype})
+        Lvm444Dev::SkpElectricsGroupManager.create_line_subgroups(group,wtype,non_group_entities,{:wiring=>wtype})
       end
     end
 
@@ -74,8 +76,8 @@ module Lvm444Dev
 
     def self.get_selected_wiring_type()
       if (is_one_group_selected())
-        group = get_selected_group()
-        return get_entity_attribute(group,"wiring")
+        #group = get_selected_group()
+        #return get_entity_attribute(group,"wiring")
       elsif (is_one_or_more_entities_selected())
         return ""
       end
