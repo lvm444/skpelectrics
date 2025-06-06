@@ -1,7 +1,7 @@
 # Расширение для подсчета кабеля и объема работ в SketchUp
 
 ## Установка
-1. Скачайте последнюю версию расширения: [latest skpelectrics.rbz](https://github.com/lvm444/skpelectrics/releases/latest/download/skpelectrics.rbz).
+1. Скачайте последнюю версию расширения: [latest skpelectrics.rbz](https://github.com/lvm444/skpelectrics/releases/download/release_0.4/skpelectrics.rbz).
 2. Установите расширение в SketchUp через меню **Window -> Extension Manager -> Install Extension**.
 
 ## Использование
