@@ -102,12 +102,12 @@ module Lvm444Dev
       model = Sketchup.active_model
       selection = model.selection
 
-      if ((selection.length > 0) && (selection.length < 10))
+      if ((selection.length > 0) && (selection.length < 10000))
         res=model.entities.add_group(selection.to_a)
         res.name = group_name
         return res
       else
-        UI.messagebox("выберите от 1 до 10 элементов для создания группы")
+        UI.messagebox("выберите от 1 до 10000 элементов для создания группы")
       end
     end
 
@@ -169,7 +169,7 @@ module Lvm444Dev
       create_specific_subgroupe(group_name,{:wiring=>wiring_meth})
     end
 
-    def self.get_selected_wiring_type()
+    def self.get_selected_wiring_types()
       if (is_one_group_selected())
         group = get_selected_group()
         return get_entity_attribute(group,"wiring")

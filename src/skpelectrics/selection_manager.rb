@@ -29,6 +29,41 @@ module Lvm444Dev
       return groups
     end
 
+    def self.get_selected_group()
+      model = Sketchup.active_model
+      selection = model.selection
+
+      if selection.length == 1 && selection.first.is_a?(Sketchup::Group)
+        return selection.first
+      end
+
+      return nil
+    end
+
+    def self.filter_horizontal_edges(edges)
+      horizontal_lines = []
+      edges.grep(Sketchup::Edge).each do |edge|
+        direction = edge.line[1]
+        if direction.parallel?(Geom::Vector3d.new(1, 0, 0)) ||
+          direction.parallel?(Geom::Vector3d.new(0, 1, 0)) ||
+          (direction.z.abs < 1e-6 && direction.length > 0)
+          horizontal_lines << edge
+        end
+      end
+      horizontal_lines
+    end
+
+    def self.filter_vertical_edges(edges)
+      vertical_lines = []
+      edges.grep(Sketchup::Edge).each do |edge|
+        direction = edge.line[1].normalize
+        if direction.parallel?(Geom::Vector3d.new(0, 0, 1)) || (direction.z.abs > 1 - 1e-6)
+          vertical_lines << edge
+        end
+      end
+      vertical_lines
+    end
+
     def self.get_selected_electric_lines
       groups = get_selected_groups
 

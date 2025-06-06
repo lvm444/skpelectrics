@@ -19,7 +19,7 @@ module Lvm444Dev
 
           types = Lvm444Dev::SketchupUtils.search_wtypes
 
-          wiring_type = Lvm444Dev::SketchupUtils.get_selected_wiring_type()
+          wiring_type = Lvm444Dev::SketchupUtils.get_selected_wiring_types()
           puts "seleted type #{wiring_type}"
           puts "types  #{types.keys().to_json}"
 
