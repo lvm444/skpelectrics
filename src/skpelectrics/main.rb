@@ -37,6 +37,10 @@ module Lvm444Dev
         Lvm444Dev::TagsManager.redefine_tags
       }
 
+      menu.add_item('Настройки тэгов') {
+        Lvm444Dev::SkpElectricsDialogs::DialogsEditTags.show_dialog
+      }
+
       file_loaded(__FILE__)
     end
   end # module HelloCube

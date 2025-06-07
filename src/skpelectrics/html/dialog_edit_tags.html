@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Редактор групп меток</title>
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    button {
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 5px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    button.secondary {
+      background-color: #2196F3;
+    }
+
+    button.danger {
+      background-color: #f44336;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    .actions {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .selected-line {
+      background-color: #e6f7ff;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    button.export {
+      background-color: #ff9800;
+    }
+
+    .tree-view {
+      list-style-type: none;
+      padding-left: 20px;
+    }
+
+    .tree-item {
+      padding: 5px 0;
+      cursor: pointer;
+    }
+
+    .tree-item.has-children {
+      font-weight: bold;
+    }
+
+    .tree-item:hover {
+      background-color: #f5f5f5;
+    }
+
+    .tree-item.selected {
+      background-color: #e6f7ff;
+      font-weight: bold;
+    }
+
+    .tree-toggle {
+      cursor: pointer;
+      margin-right: 5px;
+    }
+
+    .group-controls {
+      margin: 15px 0;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Редактор групп меток</h1>
+
+    <div class="form-group">
+      <button type="button" onclick="document.getElementById('file-input').click()" class="secondary">
+        Загрузить конфиг из файла
+      </button>
+      <input type="file" id="file-input" class="file-input" accept=".json" onchange="loadConfigFromFile(this.files)">
+
+      <button type="button" onclick="exportToFile()" class="export">
+        Экспорт в файл
+      </button>
+
+      <button type="button" onclick="showAddGroupForm()" class="secondary">
+        Добавить новую группу
+      </button>
+
+      <div id="add-group-form" style="display:none; margin-top:10px;">
+        <input type="text" id="new-group-name" placeholder="Введите название группы">
+        <select id="parent-group-select">
+          <option value="">(Корневой уровень)</option>
+        </select>
+        <button type="button" onclick="addGroup()">Добавить</button>
+        <button type="button" onclick="hideAddGroupForm()" class="danger">Отмена</button>
+      </div>
+    </div>
+
+    <div class="group-controls">
+      <h3>Выбранная группа: <span id="current-group-name">(не выбрано)</span></h3>
+      <div id="group-actions" style="display:none;">
+        <button type="button" onclick="showAddTagTypeForm()">Добавить тип метки</button>
+        <button type="button" onclick="renameGroup()">Переименовать группу</button>
+        <button type="button" onclick="removeGroup()" class="danger">Удалить группу</button>
+      </div>
+    </div>
+
+    <div class="tree-container">
+      <h3>Иерархия групп</h3>
+      <ul id="groups-tree" class="tree-view"></ul>
+    </div>
+
+    <div id="tags-editor" style="display:none;">
+      <h3>Типы меток в группе</h3>
+      <table id="tags-table">
+        <thead>
+          <tr>
+            <th>Префикс</th>
+            <th>Описание</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div id="add-tag-form" style="display:none; margin-top:10px;">
+        <input type="text" id="new-tag-prefix" placeholder="Префикс (например, ИНТ)" style="width: 100px;">
+        <input type="text" id="new-tag-description" placeholder="Описание" style="width: calc(100% - 120px);">
+        <button type="button" onclick="addTagType()">Добавить</button>
+        <button type="button" onclick="hideAddTagTypeForm()" class="danger">Отмена</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" onclick="saveConfig()" class="primary">Сохранить конфигурацию</button>
+      <button type="button" onclick="closeDialog()">Закрыть</button>
+    </div>
+  </div>
+
+  <script>
+    let tagsConfig = {
+      groups: {},
+      tagTypes: {}
+    };
+    let currentGroupPath = '';
+    let currentGroup = null;
+
+    // Инициализация формы при загрузке
+    function onLoad(configData) {
+      try {
+        const data = JSON.parse(configData);
+        tagsConfig = {
+          groups: data.groups || {},
+          tagTypes: data.tagTypes || {}
+        };
+
+        populateGroupsTree();
+        updateParentGroupSelect();
+
+        // Если есть группы, выбираем первую
+        if (Object.keys(tagsConfig.groups).length > 0) {
+          selectGroup(Object.keys(tagsConfig.groups)[0]);
+        }
+      } catch (e) {
+        console.error("Ошибка загрузки данных:", e);
+        tagsConfig = {
+          groups: {},
+          tagTypes: {}
+        };
+      }
+    }
+
+    // Построение дерева групп
+    function populateGroupsTree() {
+      const $tree = $('#groups-tree');
+      $tree.empty();
+
+      // Собираем корневые группы
+      const rootGroups = Object.entries(tagsConfig.groups).filter(
+        ([path, group]) => !path.includes('/')
+      );
+
+      rootGroups.forEach(([path, group]) => {
+        buildTreeItem($tree, path, group);
+      });
+    }
+
+    // Рекурсивное построение элемента дерева
+    function buildTreeItem($parent, path, group) {
+      const $li = $('<li class="tree-item"></li>');
+      $li.addClass(group.children ? 'has-children' : '');
+
+      // Ищем дочерние группы
+      const childGroups = Object.entries(tagsConfig.groups).filter(
+        ([childPath, childGroup]) => childPath.startsWith(path + '/')
+      );
+
+      const hasChildren = childGroups.length > 0;
+
+      $li.append(`
+        <span class="tree-toggle" onclick="event.stopPropagation(); toggleTreeItem(this)">
+          ${hasChildren ? '[-]' : '[ ]'}
+        </span>
+        <span onclick="selectGroup('${path}')">${group.name}</span>
+      `);
+
+      if (hasChildren) {
+        const $ul = $('<ul class="tree-view" style="display:block;"></ul>');
+        childGroups.forEach(([childPath, childGroup]) => {
+          buildTreeItem($ul, childPath, childGroup);
+        });
+        $li.append($ul);
+      }
+
+      $parent.append($li);
+
+      // Подсвечиваем выбранную группу
+      if (path === currentGroupPath) {
+        $li.find('span:not(.tree-toggle)').addClass('selected');
+      }
+    }
+
+    // Переключение отображения поддерева
+    function toggleTreeItem(element) {
+      const $item = $(element);
+      const $ul = $item.parent().find('> ul');
+
+      if ($ul.is(':visible')) {
+        $ul.hide();
+        $item.text('[+]');
+      } else {
+        $ul.show();
+        $item.text('[-]');
+      }
+    }
+
+    // Выбор группы для редактирования
+    function selectGroup(path) {
+      currentGroupPath = path;
+      currentGroup = tagsConfig.groups[path];
+
+      // Обновляем UI
+      $('#current-group-name').text(currentGroup?.name || '(не выбрано)');
+      $('#group-actions').toggle(!!currentGroup);
+      $('#tags-editor').toggle(!!currentGroup);
+
+      // Обновляем выделение в дереве
+      $('.tree-item span').removeClass('selected');
+      $(`.tree-item span:contains('${currentGroup?.name}')`).addClass('selected');
+
+      if (currentGroup) {
+        populateTagsTable();
+      }
+    }
+
+    // Заполнение таблицы типов меток
+    function populateTagsTable() {
+      const $tbody = $('#tags-table tbody');
+      $tbody.empty();
+
+      if (!currentGroup) return;
+
+      // Находим все метки, принадлежащие этой группе
+      const groupTags = Object.entries(tagsConfig.tagTypes).filter(
+        ([prefix, tag]) => tag.groupPath === currentGroupPath
+      );
+
+      groupTags.forEach(([prefix, tag]) => {
+        const row = `
+          <tr>
+            <td>${prefix}</td>
+            <td>${tag.description}</td>
+            <td>
+              <button onclick="editTagType('${prefix}')">Изменить</button>
+              <button onclick="removeTagType('${prefix}')" class="danger">Удалить</button>
+            </td>
+          </tr>
+        `;
+        $tbody.append(row);
+      });
+    }
+
+    // Показать форму добавления группы
+    function showAddGroupForm() {
+      $('#add-group-form').show();
+      $('#new-group-name').focus();
+    }
+
+    // Скрыть форму добавления группы
+    function hideAddGroupForm() {
+      $('#add-group-form').hide();
+      $('#new-group-name').val('');
+    }
+
+    // Обновление списка родительских групп
+    function updateParentGroupSelect() {
+      const $select = $('#parent-group-select');
+      $select.empty();
+      $select.append('<option value="">(Корневой уровень)</option>');
+
+      Object.entries(tagsConfig.groups).forEach(([path, group]) => {
+        $select.append(new Option(group.name, path));
+      });
+    }
+
+    // Добавление новой группы
+    function addGroup() {
+      const groupName = $('#new-group-name').val().trim();
+      if (!groupName) return;
+
+      const parentPath = $('#parent-group-select').val();
+      const newPath = parentPath ? `${parentPath}/${groupName}` : groupName;
+
+      if (!tagsConfig.groups[newPath]) {
+        tagsConfig.groups[newPath] = {
+          name: groupName,
+          parent: parentPath || null
+        };
+
+        // Обновляем родительскую группу (если есть)
+        if (parentPath) {
+          if (!tagsConfig.groups[parentPath].children) {
+            tagsConfig.groups[parentPath].children = [];
+          }
+          tagsConfig.groups[parentPath].children.push(newPath);
+        }
+
+        hideAddGroupForm();
+        populateGroupsTree();
+        updateParentGroupSelect();
+        selectGroup(newPath);
+      } else {
+        alert("Группа с таким именем уже существует!");
+      }
+    }
+
+    // Переименование группы
+    function renameGroup() {
+      if (!currentGroup) return;
+
+      const newName = prompt("Введите новое название группы:", currentGroup.name);
+      if (newName && newName.trim() !== '') {
+        const newNameTrimmed = newName.trim();
+
+        // Проверяем, что новое имя уникально на этом уровне
+        const parentPath = currentGroup.parent;
+        const siblings = Object.entries(tagsConfig.groups).filter(
+          ([path, group]) => group.parent === parentPath
+        );
+
+        const nameExists = siblings.some(
+          ([path, group]) => group.name === newNameTrimmed && path !== currentGroupPath
+        );
+
+        if (nameExists) {
+          alert("Группа с таким именем уже существует на этом уровне!");
+          return;
+        }
+
+        // Обновляем имя группы
+        currentGroup.name = newNameTrimmed;
+
+        // Если это корневая группа, просто обновляем путь
+        if (!parentPath) {
+          const newPath = newNameTrimmed;
+
+          // Обновляем все дочерние пути
+          updateGroupPaths(currentGroupPath, newPath);
+
+          // Обновляем текущий путь
+          currentGroupPath = newPath;
+        } else {
+          const newPath = `${parentPath}/${newNameTrimmed}`;
+
+          // Обновляем все дочерние пути
+          updateGroupPaths(currentGroupPath, newPath);
+
+          // Обновляем текущий путь
+          currentGroupPath = newPath;
+        }
+
+        populateGroupsTree();
+        updateParentGroupSelect();
+        selectGroup(currentGroupPath);
+      }
+    }
+
+    // Рекурсивное обновление путей групп
+    function updateGroupPaths(oldPath, newPath) {
+      // Обновляем саму группу
+      const group = tagsConfig.groups[oldPath];
+      tagsConfig.groups[newPath] = group;
+      delete tagsConfig.groups[oldPath];
+
+      // Обновляем ссылки в родительской группе
+      if (group.parent) {
+        const parent = tagsConfig.groups[group.parent];
+        const index = parent.children.indexOf(oldPath);
+        if (index !== -1) {
+          parent.children[index] = newPath;
+        }
+      }
+
+      // Обновляем дочерние группы
+      if (group.children) {
+        group.children.forEach(childPath => {
+          const child = tagsConfig.groups[childPath];
+          child.parent = newPath;
+
+          // Рекурсивно обновляем пути дочерних элементов
+          const newChildPath = childPath.replace(oldPath, newPath);
+          updateGroupPaths(childPath, newChildPath);
+        });
+      }
+
+      // Обновляем ссылки в метках
+      Object.values(tagsConfig.tagTypes).forEach(tag => {
+        if (tag.groupPath === oldPath) {
+          tag.groupPath = newPath;
+        }
+      });
+    }
+
+    // Удаление группы
+    function removeGroup() {
+      if (!currentGroup || !confirm(`Удалить группу "${currentGroup.name}" и все вложенные элементы?`)) {
+        return;
+      }
+
+      // Удаляем группу и все дочерние группы
+      removeGroupRecursive(currentGroupPath);
+
+      // Удаляем все метки этой группы
+      Object.keys(tagsConfig.tagTypes).forEach(prefix => {
+        if (tagsConfig.tagTypes[prefix].groupPath === currentGroupPath) {
+          delete tagsConfig.tagTypes[prefix];
+        }
+      });
+
+      // Обновляем UI
+      currentGroupPath = '';
+      currentGroup = null;
+      populateGroupsTree();
+      updateParentGroupSelect();
+      selectGroup('');
+    }
+
+    // Рекурсивное удаление группы
+    function removeGroupRecursive(path) {
+      const group = tagsConfig.groups[path];
+
+      // Сначала удаляем дочерние группы
+      if (group.children) {
+        group.children.forEach(childPath => {
+          removeGroupRecursive(childPath);
+        });
+      }
+
+      // Удаляем ссылку из родительской группы
+      if (group.parent) {
+        const parent = tagsConfig.groups[group.parent];
+        const index = parent.children.indexOf(path);
+        if (index !== -1) {
+          parent.children.splice(index, 1);
+        }
+      }
+
+      // Удаляем саму группу
+      delete tagsConfig.groups[path];
+    }
+
+    // Показать форму добавления типа метки
+    function showAddTagTypeForm() {
+      $('#add-tag-form').show();
+      $('#new-tag-prefix').focus();
+    }
+
+    // Скрыть форму добавления типа метки
+    function hideAddTagTypeForm() {
+      $('#add-tag-form').hide();
+      $('#new-tag-prefix').val('');
+      $('#new-tag-description').val('');
+    }
+
+    // Добавление типа метки
+    function addTagType() {
+      const prefix = $('#new-tag-prefix').val().trim().toUpperCase();
+      const description = $('#new-tag-description').val().trim();
+
+      if (!prefix || !description || !currentGroup) return;
+
+      if (!tagsConfig.tagTypes[prefix]) {
+        tagsConfig.tagTypes[prefix] = {
+          description: description,
+          groupPath: currentGroupPath
+        };
+
+        hideAddTagTypeForm();
+        populateTagsTable();
+      } else {
+        alert("Тип метки с таким префиксом уже существует!");
+      }
+    }
+
+    // Редактирование типа метки
+    function editTagType(prefix) {
+      const tag = tagsConfig.tagTypes[prefix];
+      const newDescription = prompt("Введите новое описание для метки:", tag.description);
+
+      if (newDescription !== null && newDescription.trim() !== '') {
+        tag.description = newDescription.trim();
+        populateTagsTable();
+      }
+    }
+
+    // Удаление типа метки
+    function removeTagType(prefix) {
+      if (confirm("Удалить этот тип метки?")) {
+        delete tagsConfig.tagTypes[prefix];
+        populateTagsTable();
+      }
+    }
+
+    // Загрузка конфигурации из файла
+    function loadConfigFromFile(files) {
+      if (files.length === 0) return;
+
+      const file = files[0];
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        try {
+          const jsonData = JSON.parse(e.target.result);
+          tagsConfig = {
+            groups: jsonData.groups || {},
+            tagTypes: jsonData.tagTypes || {}
+          };
+
+          currentGroupPath = '';
+          currentGroup = null;
+
+          populateGroupsTree();
+          updateParentGroupSelect();
+          $('#tags-editor').hide();
+
+          if (Object.keys(tagsConfig.groups).length > 0) {
+            selectGroup(Object.keys(tagsConfig.groups)[0]);
+          }
+
+          alert("Конфигурация успешно загружена из файла!");
+        } catch (e) {
+          alert("Ошибка при чтении файла: " + e.message);
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    // Экспорт конфигурации в файл
+    function exportToFile() {
+      if (Object.keys(tagsConfig.groups).length === 0) {
+        alert("Конфигурация пуста, нечего экспортировать!");
+        return;
+      }
+
+      try {
+        // Создаем JSON строку с отступами для лучшей читаемости
+        const jsonData = JSON.stringify(tagsConfig, null, 2);
+
+        // Создаем Blob с данными
+        const blob = new Blob([jsonData], { type: 'application/json' });
+
+        // Создаем ссылку для скачивания
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Предлагаем имя файла с текущей датой
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        a.download = `sketchup_tags_config_${dateStr}.json`;
+
+        // Инициируем скачивание
+        document.body.appendChild(a);
+        a.click();
+
+        // Очищаем
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+      } catch (e) {
+        alert("Ошибка при экспорте: " + e.message);
+      }
+    }
+
+    // Сохранение конфигурации
+    function saveConfig() {
+      sketchup.saveTagsConfig(JSON.stringify(tagsConfig));
+    }
+
+    // Закрытие диалога
+    function closeDialog() {
+      sketchup.closeDialog();
+    }
+
+    // Уведомление Ruby о готовности диалога
+    $(document).ready(function () {
+      window.location = 'skp:dialog_ready';
+    });
+  </script>
+</body>
+
+</html>
