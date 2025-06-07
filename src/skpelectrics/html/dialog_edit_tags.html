@@ -13,7 +13,7 @@
     }
 
     .container {
-      max-width: 800px;
+      max-width: 1000px;
       margin: 0 auto;
     }
 
@@ -128,6 +128,48 @@
       background-color: #f9f9f9;
       border-radius: 4px;
     }
+
+    .color-preview {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 1px solid #ddd;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    .color-picker {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    .form-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .form-row label {
+      width: 120px;
+      margin-bottom: 0;
+    }
+
+    .form-row input[type="text"] {
+      flex: 1;
+      margin-right: 10px;
+    }
+
+    .tag-color {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      border: 1px solid #ddd;
+      margin-right: 5px;
+    }
   </style>
 </head>
 
@@ -150,21 +192,47 @@
       </button>
 
       <div id="add-group-form" style="display:none; margin-top:10px;">
-        <input type="text" id="new-group-name" placeholder="Введите название группы">
-        <select id="parent-group-select">
-          <option value="">(Корневой уровень)</option>
-        </select>
+        <div class="form-row">
+          <label>Название:</label>
+          <input type="text" id="new-group-name" placeholder="Введите название группы">
+        </div>
+        <div class="form-row">
+          <label>Цвет:</label>
+          <input type="color" id="new-group-color" class="color-picker" value="#cccccc">
+        </div>
+        <div class="form-row">
+          <label>Родительская:</label>
+          <select id="parent-group-select">
+            <option value="">(Корневой уровень)</option>
+          </select>
+        </div>
         <button type="button" onclick="addGroup()">Добавить</button>
         <button type="button" onclick="hideAddGroupForm()" class="danger">Отмена</button>
       </div>
     </div>
 
     <div class="group-controls">
-      <h3>Выбранная группа: <span id="current-group-name">(не выбрано)</span></h3>
+      <h3>Выбранная группа:
+        <span id="current-group-name">(не выбрано)</span>
+        <span id="current-group-color" class="color-preview"></span>
+      </h3>
       <div id="group-actions" style="display:none;">
         <button type="button" onclick="showAddTagTypeForm()">Добавить тип метки</button>
-        <button type="button" onclick="renameGroup()">Переименовать группу</button>
+        <button type="button" onclick="showEditGroupForm()">Изменить группу</button>
         <button type="button" onclick="removeGroup()" class="danger">Удалить группу</button>
+      </div>
+
+      <div id="edit-group-form" style="display:none; margin-top:10px;">
+        <div class="form-row">
+          <label>Название:</label>
+          <input type="text" id="edit-group-name">
+        </div>
+        <div class="form-row">
+          <label>Цвет:</label>
+          <input type="color" id="edit-group-color" class="color-picker">
+        </div>
+        <button type="button" onclick="updateGroup()">Сохранить</button>
+        <button type="button" onclick="hideEditGroupForm()" class="danger">Отмена</button>
       </div>
     </div>
 
@@ -180,6 +248,7 @@
           <tr>
             <th>Префикс</th>
             <th>Описание</th>
+            <th>Цвет</th>
             <th>Действия</th>
           </tr>
         </thead>
@@ -187,10 +256,37 @@
       </table>
 
       <div id="add-tag-form" style="display:none; margin-top:10px;">
-        <input type="text" id="new-tag-prefix" placeholder="Префикс (например, ИНТ)" style="width: 100px;">
-        <input type="text" id="new-tag-description" placeholder="Описание" style="width: calc(100% - 120px);">
+        <div class="form-row">
+          <label>Префикс:</label>
+          <input type="text" id="new-tag-prefix" placeholder="Например, ИНТ" style="width: 100px;">
+        </div>
+        <div class="form-row">
+          <label>Описание:</label>
+          <input type="text" id="new-tag-description" placeholder="Описание метки">
+        </div>
+        <div class="form-row">
+          <label>Цвет:</label>
+          <input type="color" id="new-tag-color" class="color-picker" value="#cccccc">
+        </div>
         <button type="button" onclick="addTagType()">Добавить</button>
         <button type="button" onclick="hideAddTagTypeForm()" class="danger">Отмена</button>
+      </div>
+
+      <div id="edit-tag-form" style="display:none; margin-top:10px;">
+        <div class="form-row">
+          <label>Префикс:</label>
+          <input type="text" id="edit-tag-prefix" disabled>
+        </div>
+        <div class="form-row">
+          <label>Описание:</label>
+          <input type="text" id="edit-tag-description">
+        </div>
+        <div class="form-row">
+          <label>Цвет:</label>
+          <input type="color" id="edit-tag-color" class="color-picker">
+        </div>
+        <button type="button" onclick="updateTagType()">Сохранить</button>
+        <button type="button" onclick="hideEditTagForm()" class="danger">Отмена</button>
       </div>
     </div>
 
@@ -207,6 +303,7 @@
     };
     let currentGroupPath = '';
     let currentGroup = null;
+    let currentTagPrefix = '';
 
     // Инициализация формы при загрузке
     function onLoad(configData) {
@@ -216,6 +313,15 @@
           groups: data.groups || {},
           tagTypes: data.tagTypes || {}
         };
+
+        // Установка цветов по умолчанию, если их нет
+        Object.values(tagsConfig.groups).forEach(group => {
+          if (!group.color) group.color = getRandomColor();
+        });
+
+        Object.values(tagsConfig.tagTypes).forEach(tag => {
+          if (!tag.color) tag.color = getRandomColor();
+        });
 
         populateGroupsTree();
         updateParentGroupSelect();
@@ -233,7 +339,17 @@
       }
     }
 
-    // Построение дерева групп
+    // Генерация случайного цвета
+    function getRandomColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+
+    // Построение дерева групп с цветами
     function populateGroupsTree() {
       const $tree = $('#groups-tree');
       $tree.empty();
@@ -246,74 +362,6 @@
       rootGroups.forEach(([path, group]) => {
         buildTreeItem($tree, path, group);
       });
-    }
-
-    // Рекурсивное построение элемента дерева
-    function buildTreeItem($parent, path, group) {
-      const $li = $('<li class="tree-item"></li>');
-      $li.addClass(group.children ? 'has-children' : '');
-
-      // Ищем дочерние группы
-      const childGroups = Object.entries(tagsConfig.groups).filter(
-        ([childPath, childGroup]) => childPath.startsWith(path + '/')
-      );
-
-      const hasChildren = childGroups.length > 0;
-
-      $li.append(`
-        <span class="tree-toggle" onclick="event.stopPropagation(); toggleTreeItem(this)">
-          ${hasChildren ? '[-]' : '[ ]'}
-        </span>
-        <span onclick="selectGroup('${path}')">${group.name}</span>
-      `);
-
-      if (hasChildren) {
-        const $ul = $('<ul class="tree-view" style="display:block;"></ul>');
-        childGroups.forEach(([childPath, childGroup]) => {
-          buildTreeItem($ul, childPath, childGroup);
-        });
-        $li.append($ul);
-      }
-
-      $parent.append($li);
-
-      // Подсвечиваем выбранную группу
-      if (path === currentGroupPath) {
-        $li.find('span:not(.tree-toggle)').addClass('selected');
-      }
-    }
-
-    // Переключение отображения поддерева
-    function toggleTreeItem(element) {
-      const $item = $(element);
-      const $ul = $item.parent().find('> ul');
-
-      if ($ul.is(':visible')) {
-        $ul.hide();
-        $item.text('[+]');
-      } else {
-        $ul.show();
-        $item.text('[-]');
-      }
-    }
-
-    // Выбор группы для редактирования
-    function selectGroup(path) {
-      currentGroupPath = path;
-      currentGroup = tagsConfig.groups[path];
-
-      // Обновляем UI
-      $('#current-group-name').text(currentGroup?.name || '(не выбрано)');
-      $('#group-actions').toggle(!!currentGroup);
-      $('#tags-editor').toggle(!!currentGroup);
-
-      // Обновляем выделение в дереве
-      $('.tree-item span').removeClass('selected');
-      $(`.tree-item span:contains('${currentGroup?.name}')`).addClass('selected');
-
-      if (currentGroup) {
-        populateTagsTable();
-      }
     }
 
     // Заполнение таблицы типов меток
@@ -343,16 +391,130 @@
       });
     }
 
+    // Рекурсивное построение элемента дерева с цветом
+    function buildTreeItem($parent, path, group) {
+      const $li = $('<li class="tree-item"></li>');
+      $li.addClass(group.children ? 'has-children' : '');
+
+      // Ищем дочерние группы
+      const childGroups = Object.entries(tagsConfig.groups).filter(
+        ([childPath, childGroup]) => childPath.startsWith(path + '/')
+      );
+
+      const hasChildren = childGroups.length > 0;
+
+      $li.append(`
+        <span class="tree-toggle" onclick="event.stopPropagation(); toggleTreeItem(this)">
+          ${hasChildren ? '[-]' : '[ ]'}
+        </span>
+        <span class="color-preview" style="background-color: ${group.color || '#cccccc'};"></span>
+        <span onclick="selectGroup('${path}')">${group.name}</span>
+      `);
+
+      if (hasChildren) {
+        const $ul = $('<ul class="tree-view" style="display:block;"></ul>');
+        childGroups.forEach(([childPath, childGroup]) => {
+          buildTreeItem($ul, childPath, childGroup);
+        });
+        $li.append($ul);
+      }
+
+      $parent.append($li);
+
+      // Подсвечиваем выбранную группу
+      if (path === currentGroupPath) {
+        $li.find('span:not(.tree-toggle):not(.color-preview)').addClass('selected');
+      }
+    }
+
+    // Выбор группы для редактирования
+    function selectGroup(path) {
+      currentGroupPath = path;
+      currentGroup = tagsConfig.groups[path];
+
+      // Обновляем UI
+      $('#current-group-name').text(currentGroup?.name || '(не выбрано)');
+      $('#current-group-color').css('background-color', currentGroup?.color || 'transparent');
+      $('#group-actions').toggle(!!currentGroup);
+      $('#tags-editor').toggle(!!currentGroup);
+      hideEditGroupForm();
+
+      // Обновляем выделение в дереве
+      $('.tree-item span').removeClass('selected');
+      if (currentGroup) {
+        $(`.tree-item span:contains('${currentGroup.name}')`).not('.color-preview').addClass('selected');
+      }
+
+      if (currentGroup) {
+        populateTagsTable();
+      }
+    }
+
+    function populateGroupsTree() {
+      const $tree = $('#groups-tree');
+      $tree.empty();
+
+      // Сортируем группы по имени для красивого отображения
+      const sortedGroups = Object.entries(tagsConfig.groups).sort((a, b) => {
+        return a[1].name.localeCompare(b[1].name);
+      });
+
+      // Сначала добавляем корневые группы
+      sortedGroups.forEach(([path, group]) => {
+        if (!group.parent) {
+          buildTreeItem($tree, path, group);
+        }
+      });
+
+      // Раскрываем путь к текущей группе
+      if (currentGroupPath) {
+        expandPathToGroup(currentGroupPath);
+      }
+    }
+
+    function expandPathToGroup(path) {
+      let currentPath = '';
+      const parts = path.split('/');
+
+      parts.forEach(part => {
+        currentPath = currentPath ? `${currentPath}/${part}` : part;
+        const $item = $(`.tree-item span:contains('${part}'):not(.tree-toggle):not(.color-preview)`);
+        const $toggle = $item.siblings('.tree-toggle');
+
+        if ($toggle.length && $toggle.text() === '[+]') {
+          $toggle.text('[-]');
+          $item.parent().find('> ul').show();
+        }
+      });
+    }
+
     // Показать форму добавления группы
     function showAddGroupForm() {
       $('#add-group-form').show();
       $('#new-group-name').focus();
+      $('#new-group-color').val(getRandomColor());
     }
 
     // Скрыть форму добавления группы
     function hideAddGroupForm() {
       $('#add-group-form').hide();
       $('#new-group-name').val('');
+    }
+
+    // Показать форму редактирования группы
+    function showEditGroupForm() {
+      if (!currentGroup) return;
+
+      $('#edit-group-name').val(currentGroup.name);
+      $('#edit-group-color').val(currentGroup.color || getRandomColor());
+      $('#edit-group-form').show();
+      $('#group-actions').hide();
+    }
+
+    // Скрыть форму редактирования группы
+    function hideEditGroupForm() {
+      $('#edit-group-form').hide();
+      $('#group-actions').show();
     }
 
     // Обновление списка родительских групп
@@ -366,17 +528,19 @@
       });
     }
 
-    // Добавление новой группы
+    // Добавление новой группы с цветом
     function addGroup() {
       const groupName = $('#new-group-name').val().trim();
       if (!groupName) return;
 
+      const groupColor = $('#new-group-color').val();
       const parentPath = $('#parent-group-select').val();
       const newPath = parentPath ? `${parentPath}/${groupName}` : groupName;
 
       if (!tagsConfig.groups[newPath]) {
         tagsConfig.groups[newPath] = {
           name: groupName,
+          color: groupColor,
           parent: parentPath || null
         };
 
@@ -397,58 +561,7 @@
       }
     }
 
-    // Переименование группы
-    function renameGroup() {
-      if (!currentGroup) return;
-
-      const newName = prompt("Введите новое название группы:", currentGroup.name);
-      if (newName && newName.trim() !== '') {
-        const newNameTrimmed = newName.trim();
-
-        // Проверяем, что новое имя уникально на этом уровне
-        const parentPath = currentGroup.parent;
-        const siblings = Object.entries(tagsConfig.groups).filter(
-          ([path, group]) => group.parent === parentPath
-        );
-
-        const nameExists = siblings.some(
-          ([path, group]) => group.name === newNameTrimmed && path !== currentGroupPath
-        );
-
-        if (nameExists) {
-          alert("Группа с таким именем уже существует на этом уровне!");
-          return;
-        }
-
-        // Обновляем имя группы
-        currentGroup.name = newNameTrimmed;
-
-        // Если это корневая группа, просто обновляем путь
-        if (!parentPath) {
-          const newPath = newNameTrimmed;
-
-          // Обновляем все дочерние пути
-          updateGroupPaths(currentGroupPath, newPath);
-
-          // Обновляем текущий путь
-          currentGroupPath = newPath;
-        } else {
-          const newPath = `${parentPath}/${newNameTrimmed}`;
-
-          // Обновляем все дочерние пути
-          updateGroupPaths(currentGroupPath, newPath);
-
-          // Обновляем текущий путь
-          currentGroupPath = newPath;
-        }
-
-        populateGroupsTree();
-        updateParentGroupSelect();
-        selectGroup(currentGroupPath);
-      }
-    }
-
-    // Рекурсивное обновление путей групп
+    // Обновление путей групп при переименовании
     function updateGroupPaths(oldPath, newPath) {
       // Обновляем саму группу
       const group = tagsConfig.groups[oldPath];
@@ -484,31 +597,56 @@
       });
     }
 
-    // Удаление группы
-    function removeGroup() {
-      if (!currentGroup || !confirm(`Удалить группу "${currentGroup.name}" и все вложенные элементы?`)) {
+    function updateGroup() {
+      if (!currentGroup) return;
+
+      const newName = $('#edit-group-name').val().trim();
+      const newColor = $('#edit-group-color').val();
+
+      if (!newName) {
+        alert("Название группы не может быть пустым!");
         return;
       }
 
-      // Удаляем группу и все дочерние группы
-      removeGroupRecursive(currentGroupPath);
+      // Сохраняем старый путь для поиска в дереве
+      const oldPath = currentGroupPath;
 
-      // Удаляем все метки этой группы
-      Object.keys(tagsConfig.tagTypes).forEach(prefix => {
-        if (tagsConfig.tagTypes[prefix].groupPath === currentGroupPath) {
-          delete tagsConfig.tagTypes[prefix];
-        }
-      });
+      // Обновляем группу
+      currentGroup.name = newName;
+      currentGroup.color = newColor;
 
-      // Обновляем UI
-      currentGroupPath = '';
-      currentGroup = null;
+      // Определяем новый путь
+      let newPath;
+      if (!currentGroup.parent) {
+        newPath = newName; // Корневая группа
+      } else {
+        newPath = `${currentGroup.parent}/${newName}`;
+      }
+
+      // Если имя не изменилось, просто обновляем цвет
+      if (oldPath === newPath) {
+        populateGroupsTree();
+        selectGroup(newPath);
+        hideEditGroupForm();
+        return;
+      }
+
+      // Обновляем пути
+      updateGroupPaths(oldPath, newPath);
+
+      // Обновляем текущий путь
+      currentGroupPath = newPath;
+
+      // Полностью перестраиваем дерево
       populateGroupsTree();
       updateParentGroupSelect();
-      selectGroup('');
+
+      // Выбираем обновленную группу
+      selectGroup(newPath);
+      hideEditGroupForm();
     }
 
-    // Рекурсивное удаление группы
+    // Рекурсивное удаление группы и всех дочерних групп
     function removeGroupRecursive(path) {
       const group = tagsConfig.groups[path];
 
@@ -530,12 +668,37 @@
 
       // Удаляем саму группу
       delete tagsConfig.groups[path];
+
+      // Удаляем все метки этой группы
+      Object.keys(tagsConfig.tagTypes).forEach(prefix => {
+        if (tagsConfig.tagTypes[prefix].groupPath === path) {
+          delete tagsConfig.tagTypes[prefix];
+        }
+      });
+    }
+
+    // Удаление группы
+    function removeGroup() {
+      if (!currentGroup || !confirm(`Удалить группу "${currentGroup.name}" и все вложенные элементы?`)) {
+        return;
+      }
+
+      // Удаляем группу и все дочерние группы
+      removeGroupRecursive(currentGroupPath);
+
+      // Обновляем UI
+      currentGroupPath = '';
+      currentGroup = null;
+      populateGroupsTree();
+      updateParentGroupSelect();
+      selectGroup('');
     }
 
     // Показать форму добавления типа метки
     function showAddTagTypeForm() {
       $('#add-tag-form').show();
       $('#new-tag-prefix').focus();
+      $('#new-tag-color').val(getRandomColor());
     }
 
     // Скрыть форму добавления типа метки
@@ -545,16 +708,38 @@
       $('#new-tag-description').val('');
     }
 
-    // Добавление типа метки
+    // Показать форму редактирования типа метки
+    function showEditTagForm(prefix) {
+      const tag = tagsConfig.tagTypes[prefix];
+      if (!tag) return;
+
+      currentTagPrefix = prefix;
+      $('#edit-tag-prefix').val(prefix);
+      $('#edit-tag-description').val(tag.description);
+      $('#edit-tag-color').val(tag.color || getRandomColor());
+
+      $('#edit-tag-form').show();
+      $('#add-tag-form').hide();
+    }
+
+    // Скрыть форму редактирования типа метки
+    function hideEditTagForm() {
+      $('#edit-tag-form').hide();
+      currentTagPrefix = '';
+    }
+
+    // Добавление типа метки с цветом
     function addTagType() {
       const prefix = $('#new-tag-prefix').val().trim().toUpperCase();
       const description = $('#new-tag-description').val().trim();
+      const color = $('#new-tag-color').val();
 
       if (!prefix || !description || !currentGroup) return;
 
       if (!tagsConfig.tagTypes[prefix]) {
         tagsConfig.tagTypes[prefix] = {
           description: description,
+          color: color,
           groupPath: currentGroupPath
         };
 
@@ -565,15 +750,24 @@
       }
     }
 
-    // Редактирование типа метки
-    function editTagType(prefix) {
-      const tag = tagsConfig.tagTypes[prefix];
-      const newDescription = prompt("Введите новое описание для метки:", tag.description);
+    // Обновление типа метки
+    function updateTagType() {
+      const tag = tagsConfig.tagTypes[currentTagPrefix];
+      if (!tag) return;
 
-      if (newDescription !== null && newDescription.trim() !== '') {
-        tag.description = newDescription.trim();
-        populateTagsTable();
+      const newDescription = $('#edit-tag-description').val().trim();
+      const newColor = $('#edit-tag-color').val();
+
+      if (!newDescription) {
+        alert("Описание метки не может быть пустым!");
+        return;
       }
+
+      tag.description = newDescription;
+      tag.color = newColor;
+
+      populateTagsTable();
+      hideEditTagForm();
     }
 
     // Удаление типа метки
@@ -598,6 +792,15 @@
             groups: jsonData.groups || {},
             tagTypes: jsonData.tagTypes || {}
           };
+
+          // Установка цветов по умолчанию, если их нет
+          Object.values(tagsConfig.groups).forEach(group => {
+            if (!group.color) group.color = getRandomColor();
+          });
+
+          Object.values(tagsConfig.tagTypes).forEach(tag => {
+            if (!tag.color) tag.color = getRandomColor();
+          });
 
           currentGroupPath = '';
           currentGroup = null;
