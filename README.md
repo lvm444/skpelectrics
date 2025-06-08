@@ -1,4 +1,4 @@
-# Расширение для подсчета кабеля и объема работ в SketchUp
+# Плагин для подсчета кабеля и объема работ в SketchUp
 
 ## Установка
 1. Скачайте последнюю версию расширения: [latest skpelectrics.rbz](https://github.com/lvm444/skpelectrics/releases/download/release_0.4/skpelectrics.rbz).
