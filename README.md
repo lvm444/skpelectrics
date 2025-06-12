@@ -56,6 +56,7 @@
   ![Пример указания способа прокладки](https://github.com/lvm444/skpelectrics/blob/main/create_wire_example.png).
 
   ## sketchup электрика
+  ## sketchup плагин для электриков
   ## Плагин для автоматизации проектирования электрики в SketchUp и быстрого расчета объема работ
   ### Как считать кабель и объем работ в SketchUp
 
