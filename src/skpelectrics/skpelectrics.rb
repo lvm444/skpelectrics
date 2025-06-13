@@ -1,6 +1,3 @@
-# Copyright 2016-2022 Trimble Inc
-# Licensed under the MIT license
-
 require 'sketchup.rb'
 require 'extensions.rb'
 
