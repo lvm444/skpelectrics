@@ -32,6 +32,15 @@ module Lvm444Dev
       menu.add_item('Отредактировать справочник материалов') {
         Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog
       }
+
+      menu.add_item('Обновить метки') {
+        Lvm444Dev::TagsManager.redefine_tags
+      }
+
+      menu.add_item('Выделить все эл. линии') {
+        Lvm444Dev::SelectionManager.select_lines
+      }
+
       file_loaded(__FILE__)
     end
   end # module HelloCube
