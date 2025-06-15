@@ -7,6 +7,15 @@ module Lvm444Dev
     SELECTED_EDGES ||= 5
     SELECTED_ELECTRIC_LINES ||= 6
 
+    def self.select_lines
+      lines = Lvm444Dev::SkpElectricsLinesManager.search_electric_lines
+
+      model = Sketchup.active_model
+
+      model.selection.clear
+      lines.each { |line| model.selection.add(line.get_group) }
+    end
+
     def self.get_selection
       model = Sketchup.active_model
       selection = model.selection

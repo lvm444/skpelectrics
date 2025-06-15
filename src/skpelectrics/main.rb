@@ -37,6 +37,10 @@ module Lvm444Dev
         Lvm444Dev::TagsManager.redefine_tags
       }
 
+      menu.add_item('Выделить все эл. линии') {
+        Lvm444Dev::SelectionManager.select_lines
+      }
+
       file_loaded(__FILE__)
     end
   end # module HelloCube
