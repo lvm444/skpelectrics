@@ -99,11 +99,6 @@
       padding-left: 20px;
     }
 
-    .tree-item {
-      padding: 5px 0;
-      cursor: pointer;
-    }
-
     .tree-item.has-children {
       font-weight: bold;
     }
@@ -117,11 +112,6 @@
       font-weight: bold;
     }
 
-    .tree-toggle {
-      cursor: pointer;
-      margin-right: 5px;
-    }
-
     .group-controls {
       margin: 15px 0;
       padding: 10px;
@@ -131,11 +121,25 @@
 
     .color-preview {
       display: inline-block;
-      width: 20px;
-      height: 20px;
+      width: 15px;
+      height: 15px;
       border: 1px solid #ddd;
-      margin-right: 10px;
+      margin-right: 5px;
       vertical-align: middle;
+    }
+
+    .tree-item {
+      padding: 5px 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+
+    .tree-toggle {
+      cursor: pointer;
+      margin-right: 5px;
+      width: 20px;
+      text-align: center;
     }
 
     .color-picker {
@@ -169,6 +173,10 @@
       height: 15px;
       border: 1px solid #ddd;
       margin-right: 5px;
+    }
+
+    .group-color {
+      display: none;
     }
   </style>
 </head>
@@ -227,7 +235,7 @@
           <label>Название:</label>
           <input type="text" id="edit-group-name">
         </div>
-        <div class="form-row">
+        <div class="form-row" id="edit-group-color-row">
           <label>Цвет:</label>
           <input type="color" id="edit-group-color" class="color-picker">
         </div>
@@ -364,14 +372,13 @@
       });
     }
 
-    // Заполнение таблицы типов меток
+    // Обновленная таблица меток с отображением цвета
     function populateTagsTable() {
       const $tbody = $('#tags-table tbody');
       $tbody.empty();
 
       if (!currentGroup) return;
 
-      // Находим все метки, принадлежащие этой группе
       const groupTags = Object.entries(tagsConfig.tagTypes).filter(
         ([prefix, tag]) => tag.groupPath === currentGroupPath
       );
@@ -381,14 +388,49 @@
           <tr>
             <td>${prefix}</td>
             <td>${tag.description}</td>
+            <td><span class="tag-color" style="background-color: ${tag.color || '#cccccc'}"></span> ${tag.color}</td>
             <td>
-              <button onclick="editTagType('${prefix}')">Изменить</button>
+              <button onclick="showEditTagForm('${prefix}')">Изменить</button>
               <button onclick="removeTagType('${prefix}')" class="danger">Удалить</button>
             </td>
           </tr>
         `;
         $tbody.append(row);
       });
+    }
+
+    // Рекурсивное построение элемента дерева с цветами для конечных групп
+    function buildTreeItem($parent, path, group) {
+      const $li = $('<li class="tree-item"></li>');
+      const hasChildren = group.children && group.children.length > 0;
+
+      $li.addClass(hasChildren ? 'has-children' : '');
+
+      // Для конечных групп добавляем цвет
+      const colorElement = hasChildren ? '' :
+        `<span class="color-preview" style="background-color: ${group.color || '#cccccc'}; margin-right: 5px;"></span>`;
+
+      $li.append(`
+        <span class="tree-toggle" onclick="toggleTreeItem(this); event.stopPropagation();">
+          ${hasChildren ? '[-]' : '[ ]'}
+        </span>
+        ${colorElement}
+        <span onclick="selectGroup('${path}')">${group.name}</span>
+      `);
+
+      if (hasChildren) {
+        const $ul = $('<ul class="tree-view" style="display:block;"></ul>');
+        group.children.forEach(childPath => {
+          buildTreeItem($ul, childPath, tagsConfig.groups[childPath]);
+        });
+        $li.append($ul);
+      }
+
+      $parent.append($li);
+
+      if (path === currentGroupPath) {
+        $li.find('span:not(.tree-toggle):not(.color-preview)').addClass('selected');
+      }
     }
 
     // Рекурсивное построение элемента дерева с цветом
@@ -404,10 +446,9 @@
       const hasChildren = childGroups.length > 0;
 
       $li.append(`
-        <span class="tree-toggle" onclick="event.stopPropagation(); toggleTreeItem(this)">
+        <span class="tree-toggle" onclick="toggleTreeItem(this); event.stopPropagation();">
           ${hasChildren ? '[-]' : '[ ]'}
         </span>
-        <span class="color-preview" style="background-color: ${group.color || '#cccccc'};"></span>
         <span onclick="selectGroup('${path}')">${group.name}</span>
       `);
 
@@ -427,14 +468,38 @@
       }
     }
 
-    // Выбор группы для редактирования
+    // Функция для переключения отображения поддерева
+    function toggleTreeItem(element) {
+      const $item = $(element);
+      const $ul = $item.parent().find('> ul');
+
+      if ($ul.is(':visible')) {
+        $ul.hide();
+        $item.text('[+]');
+      } else {
+        $ul.show();
+        $item.text('[-]');
+      }
+
+      // Останавливаем всплытие события, чтобы не срабатывал click на группе
+      event.stopPropagation();
+    }
+
+    // Функция выбора группы
     function selectGroup(path) {
       currentGroupPath = path;
       currentGroup = tagsConfig.groups[path];
 
       // Обновляем UI
       $('#current-group-name').text(currentGroup?.name || '(не выбрано)');
-      $('#current-group-color').css('background-color', currentGroup?.color || 'transparent');
+
+      // Показываем цвет только для конечных групп
+      const hasChildren = currentGroup?.children && currentGroup.children.length > 0;
+      $('#current-group-color').toggle(!hasChildren);
+      if (!hasChildren && currentGroup) {
+        $('#current-group-color').css('background-color', currentGroup.color || '#cccccc');
+      }
+
       $('#group-actions').toggle(!!currentGroup);
       $('#tags-editor').toggle(!!currentGroup);
       hideEditGroupForm();
@@ -442,7 +507,7 @@
       // Обновляем выделение в дереве
       $('.tree-item span').removeClass('selected');
       if (currentGroup) {
-        $(`.tree-item span:contains('${currentGroup.name}')`).not('.color-preview').addClass('selected');
+        $(`.tree-item span:contains('${currentGroup.name}')`).not('.tree-toggle').not('.color-preview').addClass('selected');
       }
 
       if (currentGroup) {
@@ -452,6 +517,7 @@
 
     function populateGroupsTree() {
       const $tree = $('#groups-tree');
+      $tree.hide(); // Сначала скрываем
       $tree.empty();
 
       // Сортируем группы по имени для красивого отображения
@@ -470,6 +536,8 @@
       if (currentGroupPath) {
         expandPathToGroup(currentGroupPath);
       }
+
+      $tree.fadeIn(200); // Плавное появление
     }
 
     function expandPathToGroup(path) {
@@ -506,7 +574,16 @@
       if (!currentGroup) return;
 
       $('#edit-group-name').val(currentGroup.name);
-      $('#edit-group-color').val(currentGroup.color || getRandomColor());
+
+      // Показываем цвет только для групп без вложенных элементов
+      const hasChildren = currentGroup.children && currentGroup.children.length > 0;
+      if (hasChildren) {
+        $('#edit-group-color-row').hide();
+      } else {
+        $('#edit-group-color-row').show();
+        $('#edit-group-color').val(currentGroup.color || getRandomColor());
+      }
+
       $('#edit-group-form').show();
       $('#group-actions').hide();
     }
@@ -708,7 +785,7 @@
       $('#new-tag-description').val('');
     }
 
-    // Показать форму редактирования типа метки
+    // Обновленная форма редактирования метки с цветом
     function showEditTagForm(prefix) {
       const tag = tagsConfig.tagTypes[prefix];
       if (!tag) return;
@@ -728,7 +805,7 @@
       currentTagPrefix = '';
     }
 
-    // Добавление типа метки с цветом
+    // Обновленная функция добавления метки с цветом
     function addTagType() {
       const prefix = $('#new-tag-prefix').val().trim().toUpperCase();
       const description = $('#new-tag-description').val().trim();
@@ -739,7 +816,7 @@
       if (!tagsConfig.tagTypes[prefix]) {
         tagsConfig.tagTypes[prefix] = {
           description: description,
-          color: color,
+          color: color,  // Сохраняем цвет для метки
           groupPath: currentGroupPath
         };
 
