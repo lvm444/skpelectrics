@@ -1,5 +1,5 @@
 # Плагин для подсчета кабеля и объема работ в SketchUp
-[Телеграмм](https://t.me/skpelectrics)
+[Телеграмм для пожеланий и обратной связи](https://t.me/skpelectrics)
 
 ## Установка
 1. Скачайте последнюю версию расширения: [latest skpelectrics.rbz](https://github.com/lvm444/skpelectrics/releases/download/release_0.4/skpelectrics.rbz).
