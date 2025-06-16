@@ -107,8 +107,18 @@ module Lvm444Dev
 
         wiring_group_hash[wtype].each do |group|
           group.layer = layer
-        end
 
+          entitites_to_clean = group.entities.grep(Sketchup::Drawingelement)
+
+          entitites_to_clean.each do |entity|
+            if entity.is_a?(Sketchup::Group)
+              next
+            end
+
+            puts "to undef layer - #{entity}"
+            entity.layer = nil
+          end
+        end
       end
 
       model.commit_operation
