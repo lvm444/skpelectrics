@@ -2,7 +2,7 @@
 [Телеграмм для пожеланий и обратной связи](https://t.me/skpelectrics)
 
 ## Установка
-1. Скачайте последнюю версию расширения: [latest skpelectrics.rbz](https://github.com/lvm444/skpelectrics/releases/download/release_0.4/skpelectrics.rbz).
+1. Скачайте последнюю версию расширения: [latest skpelectrics.rbz](https://github.com/lvm444/skpelectrics/releases/latest).
 2. Установите расширение в SketchUp через меню **Window -> Extension Manager -> Install Extension**.
 
 ## Использование
