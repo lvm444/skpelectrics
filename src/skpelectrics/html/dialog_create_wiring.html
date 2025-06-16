@@ -1,75 +1,330 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Table Data</title>
-  <link rel="stylesheet" href="styles.css">
-  <!-- Include jQuery -->
+  <title>Выбор способа прокладки кабеля</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .mode-block {
+      display: none;
+      margin: 15px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+
+    .active-mode {
+      border-color: #4CAF50;
+      background-color: #f0fff0;
+    }
+
+    .wiring-option {
+      margin: 10px 0;
+    }
+
+    .radio-group {
+      margin: 15px 0;
+    }
+
+    .radio-option {
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .radio-option input {
+      margin-right: 10px;
+    }
+
+    select,
+    input[type="text"] {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #warning-block {
+      display: none;
+      color: red;
+      background-color: #ffeeee;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid red;
+      border-radius: 4px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    h2 {
+      color: #333;
+      margin-top: 0;
+    }
+
+    h3 {
+      margin-bottom: 10px;
+      color: #555;
+    }
+  </style>
   <script src="./js/jquery-3.6.0.min.js"></script>
-  <script src="./js/jquery.tablesorter.min.js"></script>
-  <link rel="stylesheet" href="./css/skpelectrics_css.css">
 </head>
 
 <body>
-  <h1>Выбор способа прокладки провода</h1>
-  <div id="choose_wiring">
-    <label for="wire-select">Выбери способ прокладки кабеля:</label>
-    <select id="wire-select" onselect="change_wtype">
-    </select>
-    <label for="wire-select">или введи текстом:</label>
-    <input type="text" name="txt_wiring_type" />
-    <button type="button" onclick="edit_wiring_type()">OK</button>
+  <h1>Выбор способа прокладки кабеля</h1>
+
+  <!-- Блок для отображения предупреждения -->
+  <div id="warning-block">
+    <p id="warning-message"></p>
+  </div>
+
+  <!-- Режим для групп линий (selection_type = 6) -->
+  <div id="group-mode" class="mode-block">
+    <h2>Режим для групп линий</h2>
+    <p>Выбраны группы линий. Выберите тип редактирования:</p>
+
+    <div class="radio-group">
+      <div class="radio-option">
+        <input type="radio" id="edit-all" name="edit-mode" value="all" checked>
+        <label for="edit-all">Для всех линий в группе</label>
+      </div>
+      <div class="radio-option">
+        <input type="radio" id="edit-hv" name="edit-mode" value="horizontal-vertical">
+        <label for="edit-hv">Отдельно для горизонтальных и вертикальных линий</label>
+      </div>
+    </div>
+
+    <!-- Режим редактирования для всех линий -->
+    <div id="all-lines-edit" class="wiring-option">
+      <h3>Для всех линий</h3>
+      <label>Выберите способ прокладки:</label>
+      <select id="all-wire-select">
+        <option value="">-- Выберите --</option>
+      </select>
+      <label>или введите вручную:</label>
+      <input type="text" id="all-wire-input" />
+    </div>
+
+    <!-- Режим редактирования с разделением на горизонтальные/вертикальные -->
+    <div id="hv-lines-edit" class="wiring-option hidden">
+      <div class="wiring-direction">
+        <h3>Горизонтальные линии</h3>
+        <label>Выберите способ прокладки:</label>
+        <select id="horizontal-wire-select">
+          <option value="">-- Выберите --</option>
+        </select>
+        <label>или введите вручную:</label>
+        <input type="text" id="horizontal-wire-input" />
+      </div>
+
+      <div class="wiring-direction">
+        <h3>Вертикальные линии</h3>
+        <label>Выберите способ прокладки:</label>
+        <select id="vertical-wire-select">
+          <option value="">-- Выберите --</option>
+        </select>
+        <label>или введите вручную:</label>
+        <input type="text" id="vertical-wire-input" />
+      </div>
+    </div>
+
+    <button type="button" onclick="applyGroupWiring()">Применить</button>
+  </div>
+
+  <!-- Режим для отдельных линий (selection_type = 5) -->
+  <div id="single-mode" class="mode-block">
+    <h2>Режим для отдельных линий</h2>
+    <p>Выбраны линии внутри группы. Укажите способ прокладки:</p>
+
+    <div class="wiring-option">
+      <label>Выберите способ прокладки:</label>
+      <select id="single-wire-select">
+        <option value="">-- Выберите --</option>
+      </select>
+      <label>или введите вручную:</label>
+      <input type="text" id="single-wire-input" />
+    </div>
+
+    <button type="button" onclick="applySingleWiring()">Применить</button>
   </div>
 
   <script>
-    // Function to populate the table with data using jQuery
-    function onload(selected_wiring_type, wtypes) {
-      const $wiring_type_input = $('#choose_wiring input');
+    // Глобальные переменные
+    let wiringTypes = [];
+    let currentSelectionType = null;
 
-      $wiring_type_input.empty();
-      $wiring_type_input.val(selected_wiring_type)
+    // Функции для работы с предупреждениями
+    function showWarning(message, blockSave = true) {
+      $('#warning-message').text(message);
+      $('#warning-block').show();
+      window.blockSave = blockSave;
+    }
 
-      const $wtypes_combobox = $('#wire-select');
+    function hideWarning() {
+      $('#warning-block').hide();
+      window.blockSave = false;
+    }
 
-      const wtypesarray = JSON.parse(wtypes);
+    // Инициализация при загрузке
+    function onload(selected_wiring_type, wtypes, selected_stats) {
+      wiringTypes = JSON.parse(wtypes);
+      currentSelectionType = selected_stats.selection_type;
 
-      var null_option = new Option("", null);
-      $wtypes_combobox.append(null_option);
-      wtypesarray.forEach(type => {
-        var option = new Option(type, type);
-        if (type == selected_wiring_type) {
-          option.selected = true;
+      // Заполняем комбобоксы доступными типами
+      fillWireSelects();
+
+      // Настройка обработчиков радиокнопок
+      setupRadioHandlers();
+
+      // Показываем соответствующий режим
+      showCorrectMode(selected_wiring_type);
+    }
+
+    // Настройка обработчиков радиокнопок
+    function setupRadioHandlers() {
+      $('input[name="edit-mode"]').change(function () {
+        if ($(this).val() === 'all') {
+          $('#all-lines-edit').removeClass('hidden');
+          $('#hv-lines-edit').addClass('hidden');
+        } else {
+          $('#all-lines-edit').addClass('hidden');
+          $('#hv-lines-edit').removeClass('hidden');
         }
-        $wtypes_combobox.append(option);
       });
+    }
 
-      $wtypes_combobox.on('change', function () {
-        change_wtype(this.value);
+    // Заполнение всех комбобоксов
+    function fillWireSelects() {
+      // Для группового режима - все линии
+      const $allSelect = $('#all-wire-select');
+
+      // Для группового режима - разделение
+      const $horizontalSelect = $('#horizontal-wire-select');
+      const $verticalSelect = $('#vertical-wire-select');
+
+      // Для одиночного режима
+      const $singleSelect = $('#single-wire-select');
+
+      // Очищаем и заполняем все селекты
+      $allSelect.empty().append('<option value="">-- Выберите --</option>');
+      $horizontalSelect.empty().append('<option value="">-- Выберите --</option>');
+      $verticalSelect.empty().append('<option value="">-- Выберите --</option>');
+      $singleSelect.empty().append('<option value="">-- Выберите --</option>');
+
+      wiringTypes.forEach(type => {
+        $allSelect.append(new Option(type, type));
+        $horizontalSelect.append(new Option(type, type));
+        $verticalSelect.append(new Option(type, type));
+        $singleSelect.append(new Option(type, type));
       });
-
     }
 
-    function change_wtype(value) {
-      const $wtypes_combobox = $('#wire-select');
+    // Показать правильный режим работы
+    function showCorrectMode(selected_wiring_type) {
+      // Скрываем все режимы
+      $('.mode-block').hide().removeClass('active-mode');
 
-      const $wiring_type_input = $('#choose_wiring input');
-
-      $wiring_type_input.empty();
-      $wiring_type_input.val(value)
+      // Показываем нужный режим
+      if (currentSelectionType === 6) {
+        $('#group-mode').show().addClass('active-mode');
+        // По умолчанию показываем редактирование для всех линий
+        $('#all-lines-edit').removeClass('hidden');
+        $('#hv-lines-edit').addClass('hidden');
+      } else if (currentSelectionType === 5) {
+        $('#single-mode').show().addClass('active-mode');
+      } else if (currentSelectionType === 2) {
+        $('#single-mode').show().addClass('active-mode');
+        $('#single-wire-input').val(selected_wiring_type);
+      }
     }
 
-    function edit_wiring_type() {
-      const $wiring_type_input = $('#choose_wiring input');
-      wtype = $wiring_type_input.val();
-      sketchup.edit_wiring_type(wtype);
+    // Применить настройки для группового режима
+    function applyGroupWiring() {
+      const editMode = $('input[name="edit-mode"]:checked').val();
+
+      if (editMode === 'all') {
+        // Режим "Для всех линий"
+        const wiringType = $('#all-wire-input').val() || $('#all-wire-select').val();
+
+        if (!wiringType) {
+          showWarning('Необходимо указать способ прокладки!');
+          return;
+        }
+
+        if (wiringType === 'недопустимый_способ') {
+          showWarning('Выбран недопустимый способ прокладки!');
+          return;
+        }
+
+        // Отправляем данные в SketchUp (один тип для всех линий)
+        sketchup.applyGroupWiringAll(wiringType);
+      } else {
+        // Режим "Горизонтальные/вертикальные"
+        const horizontalType = $('#horizontal-wire-input').val() || $('#horizontal-wire-select').val();
+        const verticalType = $('#vertical-wire-input').val() || $('#vertical-wire-select').val();
+
+        if (!horizontalType || !verticalType) {
+          showWarning('Необходимо указать способ прокладки для обоих типов линий!');
+          return;
+        }
+
+        if (horizontalType === 'недопустимый_способ' || verticalType === 'недопустимый_способ') {
+          showWarning('Выбран недопустимый способ прокладки!');
+          return;
+        }
+
+        // Отправляем данные в SketchUp (разные типы)
+        sketchup.applyGroupHVWiring(horizontalType, verticalType);
+      }
     }
 
+    // Применить настройки для одиночного режима
+    function applySingleWiring() {
+      const wiringType = $('#single-wire-input').val() || $('#single-wire-select').val();
 
-    // Notify Ruby to send the table data
+      if (!wiringType) {
+        showWarning('Необходимо указать способ прокладки!');
+        return;
+      }
+
+      if (wiringType === 'недопустимый_способ') {
+        showWarning('Выбран недопустимый способ прокладки!');
+        return;
+      }
+
+      // Отправляем данные в SketchUp
+      sketchup.applySingleWiring(wiringType);
+    }
+
+    // Инициализация при готовности документа
     $(document).ready(function () {
       window.location = 'skp:dialog_ready';
+      window.blockSave = false;
     });
   </script>
 </body>

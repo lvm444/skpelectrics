@@ -7,32 +7,6 @@ module Lvm444Dev
 
     INCH_SCALE ||= 0.0254
 
-    def self.calculate_length_by_attribute(group,attribute_name)
-      scale = 0.0254
-      entities = group.entities
-
-      attribute_sums = Hash.new(0.0) # Default to 0.0 for any new key
-      entities.each do |entity|
-
-        attribute_value = entity.get_attribute("dynamic_attributes", "wiring")
-        next if attribute_value==nil
-
-        entity_length = 0
-        if entity.is_a?(Sketchup::Edge)
-          entity_length += entity.length
-        elsif entity.is_a?(Sketchup::Group)
-          entity.entities.grep(Sketchup::Edge).each do |edge|
-            entity_length += edge.length
-          end
-        end
-
-        attribute_sums[attribute_value] += entity_length * scale
-
-      end
-
-      attribute_sums
-    end
-
     # calculation
 
     def self.calculate_length_by_entity(entity)
@@ -128,12 +102,12 @@ module Lvm444Dev
       model = Sketchup.active_model
       selection = model.selection
 
-      if ((selection.length > 0) && (selection.length < 10))
+      if ((selection.length > 0) && (selection.length < 10000))
         res=model.entities.add_group(selection.to_a)
         res.name = group_name
         return res
       else
-        UI.messagebox("выберите от 1 до 10 элементов для создания группы")
+        UI.messagebox("выберите от 1 до 10000 элементов для создания группы")
       end
     end
 
@@ -195,25 +169,12 @@ module Lvm444Dev
       create_specific_subgroupe(group_name,{:wiring=>wiring_meth})
     end
 
-    def self.get_selected_wiring_type()
+    def self.get_selected_wiring_types()
       if (is_one_group_selected())
         group = get_selected_group()
         return get_entity_attribute(group,"wiring")
       elsif (is_one_or_more_entities_selected())
         return ""
-      end
-    end
-
-    def self.edit_wiring_type(wtype)
-      if is_one_group_selected()
-        group = get_selected_group()
-        self.set_entity_attribute(group,"wiring",wtype)
-        puts "group #{group} set wtype = #{wtype}"
-      elsif is_one_or_more_entities_selected()
-        puts "create group set wtype = #{wtype}"
-        create_specific_subgroupe(wtype,{:wiring=>wtype})
-      else
-        UI.messagebox("Выделение не корректно. попробуйте выделить заново и повторить")
       end
     end
 
