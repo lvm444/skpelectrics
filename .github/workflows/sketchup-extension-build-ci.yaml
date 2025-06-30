@@ -1,4 +1,4 @@
-name: Create Extension RBZ file
+name: Build Extension
 
 on:
   push:
@@ -6,8 +6,10 @@ on:
       - '*'
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
-      
 jobs:
   build-extension:
     runs-on: ubuntu-latest
@@ -19,53 +21,101 @@ jobs:
     - name: Install zip
       run: sudo apt-get install -y zip
 
+    # Tag processing (runs on all tag pushes)
     - name: get tag params
+      if: startsWith(github.ref, 'refs/tags/')
       uses: olegtarasov/get-tag@v2.1.4
       id: tagName
       with:
-          tagRegex: '^(?<type>[a-zA-Z0-9]+)_(?<version>\d+\.\d+)$'
-      
+        tagRegex: '^(?<type>[a-zA-Z0-9]+)_(?<version>\d+\.\d+)$'
+
+    # Version determination
     - name: Determine version number
       id: version
       run: |
-        echo "1" > major_version.txt # Set major version manually
-        echo $GIT_TAG_NAME
-        echo "version ${{ steps.tagName.outputs.version }}"
-        echo "type ${{ steps.tagName.outputs.type }}"
-        echo "${{ github.run_number }}" > minor_version.txt # Use the GitHub run number for minor version
-        echo "major=1" >> $GITHUB_ENV
-        echo "minor=${{ github.run_number }}" >> $GITHUB_ENV
+        if [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+          if [[ "${{ github.ref }}" == *"feature_"* ]] || [[ "${{ github.ref }}" == *"dev_"* ]]; then
+            echo "0" > major_version.txt
+            echo "${{ github.run_number }}" > minor_version.txt
+            echo "major=0" >> $GITHUB_ENV
+            echo "minor=${{ github.run_number }}" >> $GITHUB_ENV
+            echo "build_type=feature" >> $GITHUB_ENV
+            echo "tag_type=custom" >> $GITHUB_ENV
+          else
+            echo "1" > major_version.txt
+            echo "${{ github.run_number }}" > minor_version.txt
+            echo "major=1" >> $GITHUB_ENV
+            echo "minor=${{ github.run_number }}" >> $GITHUB_ENV
+            echo "build_type=release" >> $GITHUB_ENV
+            echo "tag_type=release" >> $GITHUB_ENV
+          fi
+        else
+          echo "0" > major_version.txt
+          echo "${{ github.run_number }}" > minor_version.txt
+          echo "major=0" >> $GITHUB_ENV
+          echo "minor=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "build_type=nightly" >> $GITHUB_ENV
+          echo "tag_type=none" >> $GITHUB_ENV
+        fi
 
     - name: Zip 'src' folder
-      run: cd src && zip -r ../skpelectrics.rbz ./*
+      run: |
+        cd src
+        if [ "${{ env.tag_type }}" = "release" ]; then
+          zip -r ../skpelectrics-${{ steps.tagName.outputs.version }}.rbz ./*
+        elif [ "${{ env.tag_type }}" = "custom" ]; then
+          zip -r ../skpelectrics-${GITHUB_REF#refs/tags/}.rbz ./*
+        else
+          zip -r ../skpelectrics-nightly-${{ github.run_number }}.rbz ./*
+        fi
 
-    - name: publish
+    # Always upload as artifact
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: skpelectrics.rbz
-        path: skpelectrics.rbz
-    - name: release
-      if: steps.tagName.outputs.type == 'release'
+        name: ${{ env.tag_type == 'release' && format('skpelectrics-{0}.rbz', steps.tagName.outputs.version) || 
+               env.tag_type == 'custom' && format('skpelectrics-{0}.rbz', github.ref_name) || 
+               format('skpelectrics-nightly-{0}.rbz', github.run_number) }}
+        path: ${{ env.tag_type == 'release' && format('skpelectrics-{0}.rbz', steps.tagName.outputs.version) || 
+               env.tag_type == 'custom' && format('skpelectrics-{0}.rbz', github.ref_name) || 
+               format('skpelectrics-nightly-{0}.rbz', github.run_number) }}
+
+    # Release creation (only for release tags)
+    - name: Create Release
+      if: env.tag_type == 'release'
       uses: actions/create-release@v1
       id: create_release
       with:
         draft: false
         prerelease: false
-        release_name: release_${{ steps.tagName.outputs.version }}
+        release_name: Release ${{ steps.tagName.outputs.version }}
         tag_name: ${{ github.ref }}
-        body: "relase ${{ github.ref }}"
+        body: |
+          Release ${{ steps.tagName.outputs.version }}
+          Auto-generated release for ${{ github.ref }}
       env:
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-    # Step 5: Upload artifact to the release
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # Upload to release (only for release tags)
     - name: Upload Release Asset
-      if: steps.tagName.outputs.type == 'release'
+      if: env.tag_type == 'release'
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: skpelectrics.rbz
-        asset_name: skpelectrics.rbz
+        asset_path: skpelectrics-${{ steps.tagName.outputs.version }}.rbz
+        asset_name: skpelectrics-${{ steps.tagName.outputs.version }}.rbz
         asset_content_type: application/zip
       env:
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-  
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    # Feature/dev tag upload (not a full release)
+    - name: Upload Tag Asset
+      if: env.tag_type == 'custom'
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ format('https://uploads.github.com/repos/{0}/{1}/releases/tags/{2}/assets', github.repository_owner, github.repository, github.ref_name) }}
+        asset_path: skpelectrics-${GITHUB_REF#refs/tags/}.rbz
+        asset_name: skpelectrics-${GITHUB_REF#refs/tags/}.rbz
+        asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

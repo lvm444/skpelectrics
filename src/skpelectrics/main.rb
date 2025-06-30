@@ -33,11 +33,24 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog
       }
 
-      menu.add_item('Обновить метки') {
-        Lvm444Dev::TagsManager.redefine_tags
+      line_transformations_menu = menu.add_submenu('Преобразования')
+
+      line_transformations_menu.add_item('Выделить все эл. линии') {
+        Lvm444Dev::SelectionManager.select_lines
       }
 
-      menu.add_item('Настройки тэгов') {
+      line_transformations_menu.add_item('Разгруппировать группы типа прокладки') {
+        Lvm444Dev::LineTransformationManager.ungroup_lines
+      }
+
+      # раскомментировать после доработки меток
+      #tags_menu = menu.add_submenu('Метки')
+
+      #tags_menu.add_item('Обновить метки') {
+      #  Lvm444Dev::TagsManager.redefine_tags
+      #}
+
+	  menu.add_item('Настройки тэгов') {
         Lvm444Dev::SkpElectricsDialogs::DialogsEditTags.show_dialog
       }
 
