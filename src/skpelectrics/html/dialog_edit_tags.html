@@ -315,6 +315,8 @@
 
     // Инициализация формы при загрузке
     function onLoad(configData) {
+
+      console.info(configData);
       try {
         const data = JSON.parse(configData);
         tagsConfig = {
@@ -939,7 +941,7 @@
 
     // Сохранение конфигурации
     function saveConfig() {
-      sketchup.saveTagsConfig(JSON.stringify(tagsConfig));
+      sketchup.saveTagsDictionary(JSON.stringify(tagsConfig));
     }
 
     // Закрытие диалога

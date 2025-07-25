@@ -15,20 +15,16 @@ module Lvm444Dev
           # Add action callback to send data
         dialog.add_action_callback("dialog_ready") do |action_context|
           puts "dialog ready!!!"
-          #dialog.execute_script("print_report(#{items.to_json},#{totals[:lengths_by_type].to_a.to_json},#{totals[:lengths_by_rooms].to_a.to_json}),#{wiring_types.to_a.to_json}")
-
-          types = Lvm444Dev::SketchupUtils.search_wtypes
-
-          wiring_type = Lvm444Dev::SketchupUtils.get_selected_wiring_types()
-          puts "seleted type #{wiring_type}"
-          puts "types  #{types.keys().to_json}"
-
           model = Sketchup.active_model
-          dict = Lvm444Dev::ElectricalMaterialsDictionary.new(model)
 
-          puts "loaded - #{dict.to_json}"
+          tags = Lvm444Dev::TagsDictionary.new(model)
+          tags.load_from_model
 
-          dialog.execute_script("onLoad('#{dict.to_json}')")
+          puts "tags #{tags}"
+
+          puts "loaded - #{tags.to_json}"
+
+          dialog.execute_script("onLoad('#{tags.to_json.to_json}')")
         end
 
         dialog
@@ -40,8 +36,8 @@ module Lvm444Dev
         end
 
         @dialog = self.create_dialog
-        @dialog.add_action_callback('saveMaterialsDictionary') { |action_context, materials|
-          self.saveMaterialsDictionary(materials)
+        @dialog.add_action_callback('saveTagsDictionary') { |action_context, tags|
+          self.saveTagsDictionary(tags)
           nil
         }
         @dialog.add_action_callback('closeDialog') { |action_context|
@@ -52,11 +48,11 @@ module Lvm444Dev
         @dialog.show
       end
 
-      def self.saveMaterialsDictionary(materials)
+      def self.saveTagsDictionary(tags)
         model = Sketchup.active_model
-        dict = Lvm444Dev::ElectricalMaterialsDictionary.new(model)
+        dict = Lvm444Dev::TagsDictionary.new(model)
 
-        if (dict.load_from_string(materials))
+        if (dict.load_from_string(tags))
           puts "справочник успешно отредактирован!"
           if (dict.save_to_model)
             puts "справочник успешно сохранен!"
