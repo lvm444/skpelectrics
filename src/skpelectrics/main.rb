@@ -44,11 +44,15 @@ module Lvm444Dev
       }
 
       # раскомментировать после доработки меток
-      #tags_menu = menu.add_submenu('Метки')
+      tags_menu = menu.add_submenu('Метки')
 
-      #tags_menu.add_item('Обновить метки') {
-      #  Lvm444Dev::TagsManager.redefine_tags
-      #}
+      tags_menu.add_item('Обновить метки') {
+        Lvm444Dev::TagsManager.redefine_tags
+      }
+
+	    tags_menu.add_item('Настройки тэгов') {
+        Lvm444Dev::SkpElectricsDialogs::DialogsEditTags.show_dialog
+      }
 
       file_loaded(__FILE__)
     end
