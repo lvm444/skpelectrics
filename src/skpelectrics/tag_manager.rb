@@ -48,19 +48,117 @@ module Lvm444Dev
       # Get the active model
       model = Sketchup.active_model
 
+      tagsDict = Lvm444Dev::TagsDictionary.new(model)
+      tagsDict.load_from_model
+
+      materials = model.materials
       layers = model.layers
       folders = layers.folders
 
-      # Start an operation (for undo support)
+      root_folder = find_or_create_folder(model,"SkpElectrics")
 
-      root_folder = layers.add_folder("SkpElectrics")
-        lines.each do |line|
-          layer = layers.add(line.type)
-          root_folder.add_layer(layer)
-          line.get_group().layer = layer
+      clear_folder(root_folder)
+      remove_folder(model,root_folder,root_folder)
+
+      # каталог меток по структуре справочника
+      gtree = tagsDict.groups_tree
+
+      groups_hash = {}
+      gtree.each do |group|
+        create_folder_by_group(root_folder,group,groups_hash)
+      end
+
+      layers_hash = {}
+      materials_hash = {}
+
+      groups_hash.each do |gpath,folder|
+        tags = tagsDict.tags_for_group(gpath)
+        tags.each do |line_type,tag|
+          taglayer = layers.add_layer(line_type)
+          taglayer.color = tag["color"]
+          folder.add_layer(taglayer)
+
+          # define material
+          material = materials[line_type]
+          if material == nil
+            material = materials.add(line_type)
+          end
+          material.color = tag["color"]
+
+          # set hash
+          materials_hash[line_type] = material
+          layers_hash[line_type] = taglayer
+        end
+      end
+      lines = Lvm444Dev::SkpElectricsLinesManager.search_electric_lines
+
+      lines.each do |line|
+        line.get_group().layer = layers_hash[line.type]
+        line.get_group().material = materials_hash[line.type]
+      end
+
+    end
+
+    # move entities to layer
+    def self.move_entities_from_layer(entities, layers_from,layer_to)
+      layers_set = Set.new(layers_from.to_a)
+      entities.grep(Sketchup::Entity).select do |entity|
+
+        if (entity.is_a?(Sketchup::Group))
+          move_entities_from_layer(entity.entities,layers_from,layer_to)
         end
 
+        if layers_set.include?(entity.layer)
+          entity.layer = layer_to
+        end
+      end
+    end
 
+
+
+    # clear folder
+
+    def self.clear_folder(folder)
+      puts "clear folder #{folder}"
+      layers_to_clear = Lvm444Dev::TagsUtils.get_layers_from_folder(folder)
+
+      model = Sketchup.active_model
+
+      layer0 = model.layers[0] # Layer0 is always index 0
+
+      move_entities_from_layer(model.entities,layers_to_clear,layer0)
+    end
+
+    def self.remove_folder(model,folder,exclude = nil)
+      if folder
+        # Move all layers to root level first
+        folder.layers.each { |layer| folder.remove_layer(layer)}
+
+        # Remove all subfolders recursively
+        folder.folders.each { |subfolder| remove_folder(model,subfolder,nil) }
+
+        # Remove the folder itself
+        if (folder != exclude)
+          puts "remove folder #{folder.name}"
+          #model.layers.remove_folder(folder)
+          parent = folder.parent
+          parent.remove_folder(folder)
+        end
+      end
+    end
+
+    def self.create_folder_by_group(parentFolder,group,groups_hash)
+      puts "inside #{parentFolder} - #{group["name"]}"
+
+      gname = group["name"]
+
+      pfolder = parentFolder.add_folder(gname)
+
+      groups_hash[group["path"]] = pfolder
+
+      group["children"].each do |childGroup|
+        create_folder_by_group(pfolder,childGroup,groups_hash)
+      end
     end
 
     def self.calculate_length_by_attribute(group,attribute_name)
@@ -99,7 +197,8 @@ module Lvm444Dev
       folders = layers.folders
 
       model.start_operation("redefine_wiring tags", true)
-      root_folder = layers.add_folder("SkpElectricsWirings")
+
+      root_folder = find_or_create_folder(model,"SkpElectricsWirings")
 
       wiring_group_hash.each_key do |wtype|
         layer = layers.add(wtype)
@@ -115,7 +214,6 @@ module Lvm444Dev
               next
             end
 
-            puts "to undef layer - #{entity}"
             entity.layer = nil
           end
         end
@@ -124,5 +222,13 @@ module Lvm444Dev
       model.commit_operation
     end
 
+    def self.find_or_create_folder(model,folder_name)
+      root_folder = Lvm444Dev::TagsUtils.find_root_folder_by_name(model,folder_name)
+
+      if (root_folder == nil)
+        root_folder = layers.add_folder(folder_name)
+      end
+      root_folder
+    end
   end
 end

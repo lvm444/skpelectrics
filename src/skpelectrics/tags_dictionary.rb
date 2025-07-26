@@ -18,7 +18,6 @@ module Lvm444Dev
     # Загрузка данных из модели
     def load_from_model
       dict = @model.get_attribute(@dictionary_name, 'Data')
-      puts "tags data #{dict}"
       load_from_string(dict)
     end
 

@@ -254,7 +254,7 @@
       <table id="tags-table">
         <thead>
           <tr>
-            <th>Префикс</th>
+            <th>Тип</th>
             <th>Описание</th>
             <th>Цвет</th>
             <th>Действия</th>
@@ -265,7 +265,7 @@
 
       <div id="add-tag-form" style="display:none; margin-top:10px;">
         <div class="form-row">
-          <label>Префикс:</label>
+          <label>Тип линии:</label>
           <input type="text" id="new-tag-prefix" placeholder="Например, ИНТ" style="width: 100px;">
         </div>
         <div class="form-row">
@@ -282,7 +282,7 @@
 
       <div id="edit-tag-form" style="display:none; margin-top:10px;">
         <div class="form-row">
-          <label>Префикс:</label>
+          <label>Тип линии:</label>
           <input type="text" id="edit-tag-prefix" disabled>
         </div>
         <div class="form-row">
@@ -825,7 +825,7 @@
         hideAddTagTypeForm();
         populateTagsTable();
       } else {
-        alert("Тип метки с таким префиксом уже существует!");
+        alert("Тип метки таким типом линии уже существует!");
       }
     }
 
