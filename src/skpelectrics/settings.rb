@@ -25,7 +25,7 @@ module Lvm444Dev
 
 
       def self.init_settings
-        init_if_not_define("line_template_setup",1)
+        #init_if_not_define("line_template_setup",1)
       end
 
       def self.init_if_not_define(setting_name,setting_value)
@@ -44,9 +44,7 @@ module Lvm444Dev
       end
 
       unless file_loaded?(__FILE__)
-        puts "before init"
-        init_settings
-        puts "after init"
+
       end
 
 

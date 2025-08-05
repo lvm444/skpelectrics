@@ -8,7 +8,15 @@ module Lvm444Dev
       def self.parse_group(group)
         pattern_number = Lvm444Dev::SkpElectrics::Settings.get_line_template
 
-        case pattern_number
+        puts "pattern #{pattern_number}"
+
+        if pattern_number == nil
+          puts "show init pattern_number"
+          Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
+          return
+        end
+
+        case pattern_number.to_s
         when "1"
           pattern = /^(?<line_number>\d+)-(?<load_type>[А-ЯA-Z\d+(),]{1,10})-(?<room>[А-яA-Za-z\d]+)\s*(?: (?<description>.+))?$/
         when "2"
