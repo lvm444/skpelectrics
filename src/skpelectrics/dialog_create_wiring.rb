@@ -35,8 +35,8 @@ module Lvm444Dev
         end
 
         @dialog = self.create_dialog
-        @dialog.add_action_callback('apply_edges_wiring_type') { |action_context, wiring_type|
-          self.edit_wiring_type(wiring_type)
+        @dialog.add_action_callback('applySingleWiring') { |action_context, wiring_type|
+          self.apply_edges_wiring_type(wiring_type)
           nil
         }
 

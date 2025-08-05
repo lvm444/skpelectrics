@@ -8,8 +8,6 @@ module Lvm444Dev
       def self.parse_group(group)
         pattern_number = Lvm444Dev::SkpElectrics::Settings.get_line_template
 
-        puts "pattern #{pattern_number}"
-
         if pattern_number == nil
           puts "show init pattern_number"
           Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
