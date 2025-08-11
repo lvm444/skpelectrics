@@ -43,7 +43,6 @@ module Lvm444Dev
     end
 
     def self.redefine_type_tags
-
       lines = Lvm444Dev::SkpElectricsLinesManager.search_electric_lines
       # Get the active model
       model = Sketchup.active_model
@@ -53,6 +52,7 @@ module Lvm444Dev
 
       materials = model.materials
       layers = model.layers
+
       folders = layers.folders
 
       root_folder = find_or_create_folder(model,"SkpElectrics")
@@ -119,7 +119,6 @@ module Lvm444Dev
     # clear folder
 
     def self.clear_folder(folder)
-      puts "clear folder #{folder}"
       layers_to_clear = Lvm444Dev::TagsUtils.get_layers_from_folder(folder)
 
       model = Sketchup.active_model
@@ -139,7 +138,6 @@ module Lvm444Dev
 
         # Remove the folder itself
         if (folder != exclude)
-          puts "remove folder #{folder.name}"
           #model.layers.remove_folder(folder)
           parent = folder.parent
           parent.remove_folder(folder)
@@ -148,8 +146,6 @@ module Lvm444Dev
     end
 
     def self.create_folder_by_group(parentFolder,group,groups_hash)
-      puts "inside #{parentFolder} - #{group["name"]}"
-
       gname = group["name"]
 
       pfolder = parentFolder.add_folder(gname)
@@ -225,6 +221,7 @@ module Lvm444Dev
     def self.find_or_create_folder(model,folder_name)
       root_folder = Lvm444Dev::TagsUtils.find_root_folder_by_name(model,folder_name)
 
+      layers = model.layers
       if (root_folder == nil)
         root_folder = layers.add_folder(folder_name)
       end
