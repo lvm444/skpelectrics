@@ -45,7 +45,7 @@ module Lvm444Dev
   unless file_loaded?(__FILE__)
     ex = SketchupExtension.new('Skp electrics', 'skpelectrics/main')
     ex.description = 'Skp Electrics extension'
-    ex.version     = '0.0.2'
+    ex.version     = '0.9.2'
     ex.copyright   = 'lvm444'
     ex.creator     = 'lvm444'
     Sketchup.register_extension(ex, true)
