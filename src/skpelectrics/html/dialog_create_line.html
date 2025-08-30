@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Создание новой линии</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      max-width: 500px;
+      margin: 0 auto;
+      background-color: #f5f5f5;
+      font-size: 14px;
+    }
+
+    .form-container {
+      background-color: white;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      margin: 0 0 15px 0;
+      font-size: 18px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: flex-start;
+    }
+
+    .form-group {
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 3px;
+      font-weight: bold;
+      color: #555;
+      font-size: 13px;
+    }
+
+    select,
+    input[type="text"] {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 13px;
+      height: 32px;
+    }
+
+    select:focus,
+    input[type="text"]:focus {
+      border-color: #4CAF50;
+      outline: none;
+    }
+
+    .compact-select {
+      height: 32px;
+      padding: 4px 6px;
+    }
+
+    .preview-box {
+      background-color: #f9f9f9;
+      border: 1px dashed #ccc;
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      min-height: 18px;
+      font-size: 13px;
+    }
+
+    .preview-label {
+      font-weight: bold;
+      color: #777;
+      margin-bottom: 3px;
+      font-size: 13px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      width: 100%;
+      margin-top: 8px;
+      height: 32px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .filter-hint {
+      font-size: 11px;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    .number-input {
+      width: 60px;
+      flex-shrink: 0;
+    }
+
+    .type-select {
+      flex: 2;
+      min-width: 120px;
+    }
+
+    .room-select {
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .custom-input-container {
+      position: relative;
+    }
+
+    .custom-input-toggle {
+      position: absolute;
+      left: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      color: #999;
+      padding: 2px;
+      z-index: 1;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .custom-input-toggle:hover {
+      color: #4CAF50;
+      background-color: #f0f0f0;
+      border-radius: 2px;
+    }
+
+    .custom-input-field {
+      display: none;
+      margin-top: 5px;
+      position: relative;
+    }
+
+    .custom-input-field.visible {
+      display: block;
+    }
+
+    /* Сдвигаем содержимое select/input чтобы освободить место для карандаша */
+    .custom-input-container select,
+    .custom-input-container input {
+      padding-left: 24px;
+    }
+
+    /* Убираем стандартные стрелки у select */
+    .custom-input-container select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    /* Добавляем кастомную стрелку для select */
+    .custom-input-container::after {
+      content: "▼";
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: #666;
+      pointer-events: none;
+    }
+
+    /* Для кастомного поля ввода убираем стрелку */
+    .custom-input-field::after {
+      display: none;
+    }
+
+    /* Кнопка возврата к выбору из справочника */
+    .back-to-select {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      color: #999;
+      padding: 2px;
+      z-index: 1;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .back-to-select:hover {
+      color: #4CAF50;
+      background-color: #f0f0f0;
+      border-radius: 2px;
+    }
+
+    /* Стили для поля ввода в режиме кастомного ввода */
+    .custom-input-field input {
+      padding-right: 24px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="form-container">
+    <h1 id="form-title">Создание новой линии</h1>
+
+    <div class="form-row">
+      <div class="form-group number-input">
+        <label for="line-number">№</label>
+        <input type="text" id="line-number" placeholder="01">
+      </div>
+
+      <div class="form-group type-select">
+        <label for="line-type">Тип</label>
+        <div class="custom-input-container" id="line-type-container">
+          <button type="button" class="custom-input-toggle" title="Ввести произвольный тип"
+            onclick="toggleCustomInput('line-type')">✎</button>
+          <select id="line-type" class="compact-select">
+            <option value="">-- Выберите --</option>
+          </select>
+        </div>
+        <div id="line-type-custom" class="custom-input-field">
+          <input type="text" id="line-type-custom-input" placeholder="Введите произвольный тип">
+          <button type="button" class="back-to-select" title="Вернуться к выбору"
+            onclick="backToSelect('line-type')">←</button>
+        </div>
+      </div>
+
+      <div class="form-group room-select">
+        <label for="room">Помещение</label>
+        <div class="custom-input-container" id="room-container">
+          <button type="button" class="custom-input-toggle" title="Ввести произвольное помещение"
+            onclick="toggleCustomInput('room')">✎</button>
+          <select id="room" class="compact-select">
+            <option value="">-- Выберите --</option>
+          </select>
+        </div>
+        <div id="room-custom" class="custom-input-field">
+          <input type="text" id="room-custom-input" placeholder="Введите произвольное помещение">
+          <button type="button" class="back-to-select" title="Вернуться к выбору"
+            onclick="backToSelect('room')">←</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="description">Описание</label>
+      <input type="text" id="description" placeholder="розетки группа 1">
+    </div>
+
+    <div class="form-group">
+      <div class="preview-label">Название линии:</div>
+      <div class="preview-box" id="name-preview">
+        Заполните поля
+      </div>
+    </div>
+
+    <button type="button" id="create-button">Создать линию</button>
+    <button type="button" id="update-button" class="hidden">Сохранить изменения</button>
+  </div>
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <script>
+    // Глобальная переменная для хранения данных из SketchUp
+    let sketchupData = {
+      lineNumber: "01",
+      lineTypes: [],
+      rooms: [],
+      existingLine: null
+    };
+
+    // Переменные для хранения полных списков и оригинальных опций
+    let allLineTypes = [];
+    let allRooms = [];
+    let originalLineTypeOptions = null;
+    let originalRoomOptions = null;
+
+    // Функция переключения режима ввода
+    function toggleCustomInput(type) {
+      const customField = document.getElementById(`${type}-custom`);
+      const container = document.getElementById(`${type}-container`);
+      const select = document.getElementById(type);
+      const customInput = document.getElementById(`${type}-custom-input`);
+
+      if (!container || !select || !customField || !customInput) {
+        console.error('Элемент не найден:', type);
+        return;
+      }
+
+      // Получаем текущее значение из select
+      const currentValue = select.value;
+
+      // Переключаем на кастомный ввод
+      customField.classList.add('visible');
+      container.style.display = 'none';
+
+      // Устанавливаем значение в поле ввода
+      customInput.value = currentValue;
+
+      // Выделяем весь текст и фокусируемся
+      customInput.focus();
+      customInput.select();
+    }
+
+    // Функция возврата к выбору из справочника
+    function backToSelect(type) {
+      const customField = document.getElementById(`${type}-custom`);
+      const container = document.getElementById(`${type}-container`);
+      const select = document.getElementById(type);
+      const customInput = document.getElementById(`${type}-custom-input`);
+
+      if (!container || !customField) {
+        console.error('Элемент не найден:', type);
+        return;
+      }
+
+      // Восстанавливаем оригинальные опции
+      if (type === 'line-type' && originalLineTypeOptions) {
+        select.innerHTML = originalLineTypeOptions;
+        // Пытаемся восстановить предыдущее значение, если оно было из справочника
+        if (customInput.value) {
+          const options = select.options;
+          for (let i = 0; i < options.length; i++) {
+            if (options[i].value === customInput.value) {
+              options[i].selected = true;
+              break;
+            }
+          }
+        }
+      } else if (type === 'room' && originalRoomOptions) {
+        select.innerHTML = originalRoomOptions;
+        // Пытаемся восстановить предыдущее значение, если оно было из справочника
+        if (customInput.value) {
+          const options = select.options;
+          for (let i = 0; i < options.length; i++) {
+            if (options[i].value === customInput.value) {
+              options[i].selected = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // Возвращаемся к обычному select
+      customField.classList.remove('visible');
+      container.style.display = 'block';
+      customInput.value = '';
+      updatePreview();
+    }
+
+    // Функция применения произвольного значения
+    function applyCustomInput(type) {
+      const customField = document.getElementById(`${type}-custom`);
+      const container = document.getElementById(`${type}-container`);
+      const select = document.getElementById(type);
+      const customInput = document.getElementById(`${type}-custom-input`);
+      const value = customInput.value.trim();
+
+      if (!container || !select || !customField) {
+        console.error('Элемент не найден:', type);
+        return;
+      }
+
+      if (value) {
+        // Сохраняем текущее значение перед изменением
+        const currentValue = select.value;
+
+        // Восстанавливаем оригинальные опции
+        if (type === 'line-type' && originalLineTypeOptions) {
+          select.innerHTML = originalLineTypeOptions;
+        } else if (type === 'room' && originalRoomOptions) {
+          select.innerHTML = originalRoomOptions;
+        }
+
+        // Добавляем кастомное значение как первую опцию после "-- Выберите --"
+        const defaultOption = select.options[0];
+        const customOption = document.createElement('option');
+        customOption.value = value;
+        customOption.textContent = value;
+        customOption.className = 'custom-option';
+        customOption.selected = true;
+
+        // Вставляем кастомную опцию после опции по умолчанию
+        select.insertBefore(customOption, defaultOption.nextSibling);
+      }
+
+      // Возвращаемся к обычному select
+      customField.classList.remove('visible');
+      container.style.display = 'block';
+      updatePreview();
+    }
+
+    // Функция для генерации названия линии
+    function generateLineName() {
+      const lineNumber = document.getElementById('line-number').value.trim();
+      const lineType = document.getElementById('line-type').value;
+      const room = document.getElementById('room').value;
+      const description = document.getElementById('description').value.trim();
+
+      if (!lineNumber || !lineType || !room) {
+        return "Заполните поля";
+      }
+
+      // Формируем название
+      let name = `${lineNumber}-${lineType}-${room}`;
+
+      // Добавляем описание, если оно есть
+      if (description) {
+        name += ` ${description}`;
+      }
+
+      return name;
+    }
+
+    // Функция для обновления превью
+    function updatePreview() {
+      document.getElementById('name-preview').textContent = generateLineName();
+    }
+
+    // Функция для предзаполнения формы данными существующей линии
+    function fillFormWithLineData(lineData) {
+      if (!lineData) return;
+
+      document.getElementById('line-number').value = lineData.line_number || '';
+      document.getElementById('description').value = lineData.description || '';
+
+      // Устанавливаем значения выпадающих списков
+      const lineTypeSelect = document.getElementById('line-type');
+      const roomSelect = document.getElementById('room');
+
+      // Проверяем, есть ли значение в стандартных опциях
+      const lineTypeExists = allLineTypes.some(item => item.value === lineData.type);
+      const roomExists = allRooms.some(item => item.value === lineData.room);
+
+      if (lineData.type) {
+        if (!lineTypeExists) {
+          // Восстанавливаем оригинальные опции
+          if (originalLineTypeOptions) {
+            lineTypeSelect.innerHTML = originalLineTypeOptions;
+          }
+
+          // Добавляем произвольное значение в select
+          const defaultOption = lineTypeSelect.options[0];
+          const option = document.createElement('option');
+          option.value = lineData.type;
+          option.textContent = lineData.type;
+          option.selected = true;
+          option.className = 'custom-option';
+          lineTypeSelect.insertBefore(option, defaultOption.nextSibling);
+        } else {
+          lineTypeSelect.value = lineData.type;
+        }
+      }
+
+      if (lineData.room) {
+        if (!roomExists) {
+          // Восстанавливаем оригинальные опции
+          if (originalRoomOptions) {
+            roomSelect.innerHTML = originalRoomOptions;
+          }
+
+          // Добавляем произвольное значение в select
+          const defaultOption = roomSelect.options[0];
+          const option = document.createElement('option');
+          option.value = lineData.room;
+          option.textContent = lineData.room;
+          option.selected = true;
+          option.className = 'custom-option';
+          roomSelect.insertBefore(option, defaultOption.nextSibling);
+        } else {
+          roomSelect.value = lineData.room;
+        }
+      }
+
+      // Обновляем заголовок формы
+      document.getElementById('form-title').textContent = 'Редактирование линии';
+
+      // Показываем кнопку сохранения, скрываем кнопку создания
+      document.getElementById('create-button').classList.add('hidden');
+      document.getElementById('update-button').classList.remove('hidden');
+
+      updatePreview();
+    }
+
+    // Функция инициализации, вызываемая из SketchUp
+    function initForm(data) {
+      sketchupData = JSON.parse(data);
+
+      // Сохраняем полные списки
+      allLineTypes = [...sketchupData.lineTypes];
+      allRooms = [...sketchupData.rooms];
+
+      // Предзаполняем поле номера линии
+      document.getElementById('line-number').value = sketchupData.lineNumber;
+
+      // Заполняем выпадающие списки с отображением значений в скобках
+      fillSelect('line-type', allLineTypes);
+      fillSelect('room', allRooms);
+
+      // Сохраняем оригинальные опции
+      originalLineTypeOptions = document.getElementById('line-type').innerHTML;
+      originalRoomOptions = document.getElementById('room').innerHTML;
+
+      // Если переданы данные существующей линии - заполняем форму
+      if (sketchupData.existingLine) {
+        fillFormWithLineData(sketchupData.existingLine);
+      }
+
+      // Обновляем превью
+      updatePreview();
+    }
+
+    // Функция для заполнения выпадающего списка
+    function fillSelect(selectId, options) {
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">-- Выберите --</option>';
+
+      options.forEach(option => {
+        const optElement = document.createElement('option');
+        optElement.value = option.value;
+
+        // Формируем textContent в зависимости от наличия name
+        if (!option.name) {
+          optElement.textContent = `${option.value}`;
+        } else {
+          optElement.textContent = `${option.value} (${option.name})`;
+        }
+
+        // Формируем data-search атрибут
+        const searchText = option.name
+          ? `${option.value} ${option.name}`.toLowerCase()
+          : option.value.toLowerCase();
+
+        optElement.setAttribute('data-search', searchText);
+        select.appendChild(optElement);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // Элементы формы
+      const lineNumberInput = document.getElementById('line-number');
+      const lineTypeSelect = document.getElementById('line-type');
+      const roomSelect = document.getElementById('room');
+      const descriptionInput = document.getElementById('description');
+      const createButton = document.getElementById('create-button');
+      const updateButton = document.getElementById('update-button');
+      const lineTypeCustomInput = document.getElementById('line-type-custom-input');
+      const roomCustomInput = document.getElementById('room-custom-input');
+
+      // Обработчики событий для кастомных полей ввода
+      lineTypeCustomInput.addEventListener('blur', function () {
+        applyCustomInput('line-type');
+      });
+
+      roomCustomInput.addEventListener('blur', function () {
+        applyCustomInput('room');
+      });
+
+      // Обработка Enter в кастомных полях ввода
+      lineTypeCustomInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          applyCustomInput('line-type');
+        }
+      });
+
+      roomCustomInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+          applyCustomInput('room');
+        }
+      });
+
+      // Слушаем изменения в форме
+      lineNumberInput.addEventListener('input', updatePreview);
+      lineTypeSelect.addEventListener('change', updatePreview);
+      roomSelect.addEventListener('change', updatePreview);
+      descriptionInput.addEventListener('input', updatePreview);
+
+      // Обработчик кнопки создания
+      createButton.addEventListener('click', function () {
+        const lineNumber = lineNumberInput.value.trim();
+        const lineType = lineTypeSelect.value;
+        const room = roomSelect.value;
+
+        if (!lineNumber) {
+          alert('Укажите номер линии');
+          return;
+        }
+
+        if (!lineType) {
+          alert('Выберите или введите тип линии');
+          return;
+        }
+
+        if (!room) {
+          alert('Выберите или введите помещение');
+          return;
+        }
+
+        const lineName = generateLineName();
+        const description = descriptionInput.value.trim();
+
+        // Формируем данные для отправки в SketchUp
+        const lineData = {
+          number: lineNumber,
+          type: lineType,
+          room: room,
+          description: description,
+          fullName: lineName,
+          isCustom: !allLineTypes.some(item => item.value === lineType) || !allRooms.some(item => item.value === room)
+        };
+
+        // Отправляем данные в SketchUp
+        if (sketchupData.existingLine == null) {
+          console.log("create");
+          sketchup.createElectricLine(lineData);
+        } else {
+          console.log("edit ");
+          sketchup.editElectricLine(lineData);
+        }
+      });
+
+      // Обработчик кнопки обновления
+      updateButton.addEventListener('click', function () {
+        const lineNumber = lineNumberInput.value.trim();
+        const lineType = lineTypeSelect.value;
+        const room = roomSelect.value;
+
+        if (!lineNumber) {
+          alert('Укажите номер линии');
+          return;
+        }
+
+        if (!lineType) {
+          alert('Выберите или введите тип линии');
+          return;
+        }
+
+        if (!room) {
+          alert('Выберите или введите помещение');
+          return;
+        }
+
+        const lineName = generateLineName();
+        const description = descriptionInput.value.trim();
+
+        // Формируем данные для отправки в SketchUp
+        const lineData = {
+          id: sketchupData.existingLine?.id,
+          number: lineNumber,
+          type: lineType,
+          room: room,
+          description: description,
+          fullName: lineName,
+          isCustom: !allLineTypes.some(item => item.value === lineType) || !allRooms.some(item => item.value === room)
+        };
+
+        sketchup.editElectricLine(lineData);
+
+      });
+    });
+
+    // Инициализация при готовности документа
+    $(document).ready(function () {
+      window.location = 'skp:dialog_ready';
+      window.blockSave = false;
+    });
+  </script>
+</body>
+
+</html>

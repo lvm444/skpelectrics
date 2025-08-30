@@ -21,6 +21,10 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
       }
 
+      menu.add_item('Создать линию') {
+        Lvm444Dev::SkpElectricsDialogs::DialogsCreateLine.show_dialog
+      }
+
       menu.add_item('Сформировать кабельный журнал') {
         Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog
       }
@@ -54,7 +58,10 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogsEditTags.show_dialog
       }
 
+
+
       file_loaded(__FILE__)
     end
+
   end # module HelloCube
 end # module Examples

@@ -81,6 +81,11 @@ module Lvm444Dev
       @tag_types.select { |_, tag| tag['groupPath'] == group_path }
     end
 
+    # Получение меток группы
+    def tags_types()
+      return @tag_types
+    end
+
     private
 
     def clean_groups_data(groups)
