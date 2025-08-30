@@ -27,8 +27,9 @@ jobs:
       uses: olegtarasov/get-tag@v2.1.4
       id: tagName
       with:
-        tagRegex: '^(?<type>[a-zA-Z0-9]+)_(?<version>\d+\.\d+)$'
+        tagRegex: '^(?<type>[a-zA-Z0-9]+)_(?<version>\d+\.\d+\.\d+)$'
 
+    # Version determination
     - name: Determine version number
       id: version
       run: |
@@ -57,11 +58,20 @@ jobs:
           echo "tag_type=none" >> $GITHUB_ENV
         fi
 
+    # Normalize version strings
+    - name: Normalize version string
+      id: norm_version
+      run: |
+        RAW_VERSION="${GITHUB_REF_NAME#release_}"
+        echo "raw_version=$RAW_VERSION" >> $GITHUB_ENV
+        SAFE_VERSION="${RAW_VERSION//./_}"
+        echo "safe_version=$SAFE_VERSION" >> $GITHUB_ENV
+
     - name: Zip 'src' folder
       run: |
         cd src
         if [ "${{ env.tag_type }}" = "release" ]; then
-          zip -r ../skpelectrics-${{ steps.tagName.outputs.version }}.rbz ./*
+          zip -r ../skpelectrics-${{ env.safe_version }}.rbz ./*
         elif [ "${{ env.tag_type }}" = "custom" ]; then
           zip -r ../skpelectrics-${{ github.ref_name }}.rbz ./*
         else
@@ -72,10 +82,10 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.tag_type == 'release' && format('skpelectrics-{0}.rbz', steps.tagName.outputs.version) || 
+        name: ${{ env.tag_type == 'release' && format('skpelectrics-{0}.rbz', env.safe_version) || 
                env.tag_type == 'custom' && format('skpelectrics-{0}.rbz', github.ref_name) || 
                format('skpelectrics-nightly-{0}.rbz', github.run_number) }}
-        path: ${{ env.tag_type == 'release' && format('skpelectrics-{0}.rbz', steps.tagName.outputs.version) || 
+        path: ${{ env.tag_type == 'release' && format('skpelectrics-{0}.rbz', env.safe_version) || 
                env.tag_type == 'custom' && format('skpelectrics-{0}.rbz', github.ref_name) || 
                format('skpelectrics-nightly-{0}.rbz', github.run_number) }}
 
@@ -87,10 +97,10 @@ jobs:
       with:
         draft: false
         prerelease: false
-        release_name: Release ${{ steps.tagName.outputs.version }}
+        release_name: Release ${{ env.raw_version }}
         tag_name: ${{ github.ref_name }}
         body: |
-          Release ${{ steps.tagName.outputs.version }}
+          Release ${{ env.raw_version }}
           Auto-generated release for ${{ github.ref_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -101,8 +111,8 @@ jobs:
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: skpelectrics-${{ steps.tagName.outputs.version }}.rbz
-        asset_name: skpelectrics-${{ steps.tagName.outputs.version }}.rbz
+        asset_path: skpelectrics-${{ env.safe_version }}.rbz
+        asset_name: skpelectrics-${{ env.safe_version }}.rbz
         asset_content_type: application/zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
