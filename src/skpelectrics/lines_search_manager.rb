@@ -36,6 +36,17 @@ module Lvm444Dev
       rooms
     end
 
+    def self.get_next_number
+      lines = search_electric_lines
+      num = 0
+      lines.each do |line|
+        if (line.line_number.to_i > num)
+          num = line.line_number.to_i
+        end
+      end
+      num+1
+    end
+
     def self.search_wire_tap_groups
       lines = search_electric_lines
       wiring_type_hash = Hash.new()

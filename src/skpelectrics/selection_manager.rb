@@ -25,8 +25,6 @@ module Lvm444Dev
     def self.get_one_level_selection_type
       selection_stats_hash = get_selection_types_stat
 
-      puts "stats #{selection_stats_hash.to_json}"
-
       return interpret_result(selection_stats_hash)
     end
 

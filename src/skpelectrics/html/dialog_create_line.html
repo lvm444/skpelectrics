@@ -313,16 +313,24 @@
       const select = document.getElementById(type);
       const customInput = document.getElementById(`${type}-custom-input`);
 
-      if (!container || !select || !customField) {
+      if (!container || !select || !customField || !customInput) {
         console.error('Элемент не найден:', type);
         return;
       }
 
+      // Получаем текущее значение из select
+      const currentValue = select.value;
+
       // Переключаем на кастомный ввод
       customField.classList.add('visible');
       container.style.display = 'none';
-      customInput.value = select.value;
+
+      // Устанавливаем значение в поле ввода
+      customInput.value = currentValue;
+
+      // Выделяем весь текст и фокусируемся
       customInput.focus();
+      customInput.select();
     }
 
     // Функция возврата к выбору из справочника
@@ -444,7 +452,7 @@
     function fillFormWithLineData(lineData) {
       if (!lineData) return;
 
-      document.getElementById('line-number').value = lineData.number || '';
+      document.getElementById('line-number').value = lineData.line_number || '';
       document.getElementById('description').value = lineData.description || '';
 
       // Устанавливаем значения выпадающих списков
@@ -546,7 +554,7 @@
         if (!option.name) {
           optElement.textContent = `${option.value}`;
         } else {
-          optElement.textContent = `${option.name} (${option.value})`;
+          optElement.textContent = `${option.value} (${option.name})`;
         }
 
         // Формируем data-search атрибут
@@ -633,12 +641,12 @@
         };
 
         // Отправляем данные в SketchUp
-        if (typeof sketchup !== 'undefined' && sketchup.createNewLine) {
-          sketchup.createNewLine(JSON.stringify(lineData));
+        if (sketchupData.existingLine == null) {
+          console.log("create");
+          sketchup.createElectricLine(lineData);
         } else {
-          // Для тестирования без SketchUp
-          alert(`Линия создана: ${lineName}`);
-          console.log("Данные линии:", lineData);
+          console.log("edit ");
+          sketchup.editElectricLine(lineData);
         }
       });
 
@@ -677,14 +685,8 @@
           isCustom: !allLineTypes.some(item => item.value === lineType) || !allRooms.some(item => item.value === room)
         };
 
-        // Отправляем данные в SketchUp
-        if (typeof sketchup !== 'undefined' && sketchup.updateLine) {
-          sketchup.updateLine(JSON.stringify(lineData));
-        } else {
-          // Для тестирования без SketchUp
-          alert(`Линия обновлена: ${lineName}`);
-          console.log("Обновленные данные линии:", lineData);
-        }
+        sketchup.editElectricLine(lineData);
+
       });
     });
 

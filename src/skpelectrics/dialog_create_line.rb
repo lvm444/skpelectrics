@@ -16,37 +16,40 @@ module Lvm444Dev
 
           # Add action callback to send data
         dialog.add_action_callback("dialog_ready") do |action_context|
-          types = Lvm444Dev::SketchupUtils.search_wtypes
 
           selectionType = Lvm444Dev::SelectionManager.get_one_level_selection_type
 
-          puts "selectionType!! #{selectionType.to_json}"
+          electric_line = nil
+          case selectionType[:selection_type]
+          when 6
+            if selectionType[:selected_count] > 1
+              UI.messagebox("Выберите одну линию для редактирования")
+              @dialog.close
+              return
+            else
+              selection = Lvm444Dev::SelectionManager.get_selection
+
+              electric_line = Lvm444Dev::SketchupUtils::ElectricLineParser.parse_group selection.first
+              if electric_line === nil
+                UI.messagebox("Не удалось определить линию")
+                @dialog.close
+                return
+              end
+            end
+          when 5
+            selection = Lvm444Dev::SelectionManager.get_selection
+          else
+            UI.messagebox("Выберите линии для создания или редактирования")
+            @dialog.close
+            return
+          end
+
+
+          types = Lvm444Dev::SketchupUtils.search_wtypes
 
           rooms = Lvm444Dev::SkpElectricsLinesManager.get_rooms
 
-
-          #dialog.execute_script("initForm('#{wiring_type}','#{types.keys().to_json}',#{selectionType.to_json})")
-          puts "initForm #{rooms}"
-
-          #createData = {
-          #          lineNumber: "01",
-          #          lineTypes: [
-          #            { value: "РОЗЗ", name: "Розетки" },
-          #            { value: "ОСВ", name: "Освещение" },
-          #            { value: "РАБ", name: "Рабочий свет" },
-          #            { value: "ДЕЖ", name: "Дежурный свет" },
-          #            { value: "СЕТ", name: "Сеть" },
-          #            { value: "ТЕЛ", name: "Телефония" }
-          #          ],
-          #          rooms: [
-          #            { value: "ГОСТ", name: "Гостинная" },
-          #            { value: "КУХ", name: "Кухня" },
-          #            { value: "СПАЛ", name: "Спальня" },
-          #            { value: "ВАН", name: "Ванная" },
-          #            { value: "КОР", name: "Коридор" },
-          #            { value: "ОФ", name: "Офис" }
-          #          ]
-          #        };
+          next_number = Lvm444Dev::SkpElectricsLinesManager.get_next_number
 
           model = Sketchup.active_model
           tags = Lvm444Dev::TagsDictionary.new(model)
@@ -55,7 +58,7 @@ module Lvm444Dev
           types = tags.tags_types
 
           createData = {
-            lineNumber: "01",
+            lineNumber: next_number.to_s,
             lineTypes: types.map do |type, data|
               {
                 value: type,
@@ -68,17 +71,9 @@ module Lvm444Dev
               {
                 value: room
               }
-            end
+            end,
+            existingLine: electric_line
           }
-
-
-
-
-          #puts "#{tags.tags_types}"
-
-          tags.tags_types.each do |type,type_data|
-            puts "type  #{type_data['description']} (#{type_data['color']})"
-          end
 
           dialog.execute_script("initForm('#{createData.to_json}')")
         end
@@ -92,65 +87,62 @@ module Lvm444Dev
         end
 
         @dialog = self.create_dialog
-        @dialog.add_action_callback('applySingleWiring') { |action_context, wiring_type|
-          self.apply_edges_wiring_type(wiring_type)
+        @dialog.add_action_callback('createElectricLine') { |action_context, electric_line_data|
+          puts "callback createElectricLine"
+          self.crate_electric_line_group(electric_line_data)
           nil
         }
 
-        @dialog.add_action_callback('applyGroupHVWiring') { |action_context, horizontalType, verticalType|
-          self.applyGroupHVWiring(horizontalType, verticalType)
-          nil
-        }
-
-        @dialog.add_action_callback('applyGroupWiringAll') { |action_context, wtype|
-          self.applyGroupWiringAll(wtype)
+        @dialog.add_action_callback('editElectricLine') { |action_context, electric_line_data|
+        puts "callback editElectricLine"
+          self.edit_electric_line_group(electric_line_data)
           nil
         }
 
         @dialog.show
       end
 
-      # редактирование линий в группе или тип прокладки у группы
-      def self.apply_edges_wiring_type(wtype)
-
-        selectionType = Lvm444Dev::SelectionManager.get_one_level_selection_type
-
-        puts "selectionType #{selectionType.to_json}"
-
-        if (selectionType[:selection_type] == Lvm444Dev::SelectionManager::SELECTED_EDGES)
-          puts "selected edges"
-          Lvm444Dev::SkpElectricsWireType.edit_wiring_type(wtype)
+      # создание линии
+      def self.crate_electric_line_group(electric_line_data)
+        model = Sketchup.active_model
+        model.start_operation('Create Line group', true)
+        selection = Lvm444Dev::SelectionManager.get_one_level_selection_type
+        if (selection[:selection_type] === 5  && selection[:selected_count] > 0)
+          Lvm444Dev::SketchupUtils.create_group(electric_line_data["fullName"])
+        else
+          UI.messagebox("Линии выбраны не корректно: #{selection[:selection_type]} - #{selection[:selected_count]}")
         end
+
         @dialog.close
+      rescue => e
+        model.abort_operation
+        UI.messagebox("Ошибка создания линии: #{e.message}")
+
+        @dialog.close
+
       end
 
-      # массовое редактирование электролиний с формирование типов прокладки из несгруппированных участков. Пример по осям - вертикальные = штроба / горизонтальные = гофра
-      def self.applyGroupHVWiring(horizontalType, verticalType)
+      # создание линии
+      def self.edit_electric_line_group(electric_line_data)
+        model = Sketchup.active_model
+        model.start_operation('Create Line group', true)
 
-        selectionType = Lvm444Dev::SelectionManager.get_one_level_selection_type
+        group = Lvm444Dev::SelectionManager.get_selected_group
 
-        puts "selectionType #{selectionType.to_json}"
-
-        if (selectionType[:selection_type] == Lvm444Dev::SelectionManager::SELECTED_ELECTRIC_LINES)
-          lines = Lvm444Dev::SelectionManager.get_selected_electric_lines
-          Lvm444Dev::SkpElectricsWireType.create_wire_types_vh_by_electric_lines(horizontalType,verticalType,lines)
+        if (group != nil)
+          group.name = electric_line_data["fullName"]
+        else
+          UI.messagebox("Группа выбрана не корректно ")
         end
 
         @dialog.close
-      end
+      rescue => e
+        model.abort_operation
+        puts "Error creating eline: #{e.message}"
+        UI.messagebox("Ошибка создания линии: #{e.message}")
 
-      # массовое редактирование электролиний с формирование типов прокладки для всех несгруппированных
-      def self.applyGroupWiringAll(wtype)
-
-        selectionType = Lvm444Dev::SelectionManager.get_one_level_selection_type
-
-        puts "selectionType #{selectionType.to_json}"
-
-        if (selectionType[:selection_type] == Lvm444Dev::SelectionManager::SELECTED_ELECTRIC_LINES)
-          lines = Lvm444Dev::SelectionManager.get_selected_electric_lines
-          Lvm444Dev::SkpElectricsWireType.create_wire_types_by_electric_lines(wtype,lines)
-        end
         @dialog.close
+
       end
 
     end
