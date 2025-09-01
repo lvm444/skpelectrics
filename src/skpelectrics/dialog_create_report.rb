@@ -40,7 +40,7 @@ module Lvm444Dev
 
         lines.each do |line|
           lines_type_summary[line.type] =  lines_type_summary.fetch(line.type,0).to_f + line.length
-          lines_room_summary[line.room] =  lines_type_summary.fetch(line.room,0).to_f + line.length
+          lines_room_summary[line.room] =  lines_room_summary.fetch(line.room,0).to_f + line.length
 
           materials_hash = dict.get_materials_by_type(line.type)
           if (materials_hash != nil)
