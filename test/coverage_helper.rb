@@ -1,6 +1,11 @@
 # Coverage helper for SimpleCov
 require 'simplecov'
 
+# Configure SimpleCov to use consistent path
+SimpleCov.configure do
+  coverage_dir 'test/coverage'
+end
+
 SimpleCov.start do
   add_filter '/test/'
   add_filter '/vendor/'

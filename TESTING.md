@@ -209,11 +209,17 @@ set COVERAGE=true && ruby -I. unit/material_dictionaries_test.rb
 - **Current Coverage**: 24.41% (278 / 1139 lines) - reflects all loaded source files
 - **Branch Coverage**: Enabled but no branches tracked yet
 - **Coverage includes**: All source files successfully loaded with SketchUp mocks
+- **Coverage Directory**: `test/coverage/` (consistent across local and CI environments)
 
 **Coverage Limitation:**
 SimpleCov tracks coverage for files that are loaded and executed during tests. The current coverage percentage (24.41%) reflects that we've loaded all source files but only tested `material_dictionaries.rb`. As more tests are added for other modules, the overall coverage will increase.
 
 **Successfully Loaded Files:** All 20 source files now load successfully with SketchUp mocks, including files that previously required `file_loaded?` method.
+
+**CI Integration Fixed:**
+- Coverage reports now generate in `test/coverage/` consistently
+- GitHub Actions properly uploads coverage artifacts
+- No more "No files were found" warnings in CI
 
 ### CI Integration
 
