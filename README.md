@@ -1,6 +1,6 @@
 # Бесплатный плагин для подсчета кабеля и объема работ в SketchUp
 [![Tests](https://github.com/lvm444/skpelectrics/actions/workflows/sketchup-extension-build-ci.yaml/badge.svg)](https://github.com/lvm444/skpelectrics/actions/workflows/sketchup-extension-build-ci.yaml)
-[![Coverage](https://img.shields.io/badge/coverage-73%25-yellow)](https://github.com/lvm444/skpelectrics/actions)
+[![Coverage](https://img.shields.io/badge/coverage-24%25-red)](https://github.com/lvm444/skpelectrics/actions)
 
 [Телеграмм для пожеланий и обратной связи](https://t.me/skpelectrics)
 
