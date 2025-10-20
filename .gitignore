@@ -15,6 +15,7 @@ Backup of *.layout
 
 # SimpleCov
 /coverage
+test/coverage
 
 # Bundler
 Gemfile.lock

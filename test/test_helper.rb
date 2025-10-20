@@ -1,4 +1,38 @@
 # Test helper for SkpElectrics project
+
+# Mock SketchUp modules to allow loading files that depend on SketchUp
+module Sketchup; end
+module UI; end
+module Geom; end
+module Length; end
+
+# Mock file_loaded? method for SketchUp extensions
+module Kernel
+  def file_loaded?(file)
+    true
+  end
+end
+
+# Mock SketchUp require to allow loading files that depend on SketchUp
+module Kernel
+  alias_method :original_require, :require
+
+  def require(name)
+    if name == 'sketchup.rb' || name == 'extensions.rb'
+      # Return true to indicate the modules are already loaded
+      true
+    else
+      original_require(name)
+    end
+  end
+end
+
+# Load coverage if COVERAGE environment variable is set
+if ENV['COVERAGE']
+  require_relative 'coverage_helper'
+end
+
+# Always require minitest/autorun after coverage setup
 require 'minitest/autorun'
 require 'json'
 
