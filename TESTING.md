@@ -114,6 +114,18 @@ end
 
 ## Continuous Integration
 
+The project includes GitHub Actions CI that automatically runs unit tests on:
+- **Push to main branch**
+- **Pull requests to main branch**
+- **Tag pushes** (for releases)
+
+### CI Configuration
+The CI workflow (`/.github/workflows/sketchup-extension-build-ci.yaml`) includes:
+- **Unit Test Job**: Runs all unit tests before building the extension
+- **Ruby Setup**: Uses Ruby 2.7 environment
+- **Dependency Installation**: Installs minitest-reporters for better output
+- **Test Execution**: Runs all unit tests in the test directory
+
 The testing setup is designed to work in CI environments by:
 - Using mock objects instead of requiring SketchUp
 - Having no external dependencies beyond Ruby
