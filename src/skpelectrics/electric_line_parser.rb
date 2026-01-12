@@ -9,8 +9,7 @@ module Lvm444Dev
         pattern_number = Lvm444Dev::SkpElectrics::Settings.get_line_template
 
         if pattern_number == nil
-          puts "show init pattern_number"
-          Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
+          raise "parser error unknown line pattern number"
           return
         end
 
