@@ -14,6 +14,16 @@ module Lvm444Dev
 
           # Add action callback to send data
         dialog.add_action_callback("dialog_ready") do |action_context|
+          # check pattern settings
+          pattern_number = Lvm444Dev::SkpElectrics::Settings.get_line_template
+
+          if pattern_number == nil
+            Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
+            raise "parser error unknown line pattern number"
+            return
+          end
+
+
 
           lines = Lvm444Dev::SketchupUtils.search_electric_lines
 
