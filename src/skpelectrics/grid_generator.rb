@@ -251,9 +251,9 @@ module Lvm444Dev
         view.draw(GL_LINE_LOOP, corners)
 
         # Рисуем сетку (только внутри внутренней области)
-        view.drawing_color = Sketchup::Color.new(255, 0, 0)  # красный
-        view.line_width = 2
-        view.line_stipple = '-'
+        view.drawing_color = Sketchup::Color.new(255, 0, 0, 128)  # полупрозрачный красный
+        view.line_width = 1
+        view.line_stipple = '.'
 
         # Вертикальные линии
         x = inner_min_x
