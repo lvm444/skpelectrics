@@ -10,7 +10,8 @@ module Lvm444Dev
 
       def initialize
         @points = []
-        @grid_size = 1.0.m  # шаг сетки по умолчанию 1 метр
+        @grid_size = 26.0.mm   # шаг сетки по умолчанию 26 мм
+        @margin = 100.0.mm     # отступ от краев по умолчанию 100 мм
         @plane = nil
         @width = 0
         @height = 0
@@ -97,8 +98,8 @@ module Lvm444Dev
               cells_x = (@width / @grid_size).ceil
               cells_y = (@height / @grid_size).ceil
 
-              Sketchup.status_text = "Сетка: #{cells_x} x #{cells_y} ячеек, шаг: #{@grid_size.to_m}"
-              view.tooltip = "Шаг: #{@grid_size.to_m}, Ячеек: #{cells_x} x #{cells_y}, Ширина: #{@width.to_m}, Высота: #{@height.to_m}"
+              Sketchup.status_text = "Сетка: #{cells_x} x #{cells_y} ячеек, шаг: #{@grid_size.to_mm} мм"
+              view.tooltip = "Шаг: #{@grid_size.to_mm} мм, Ячеек: #{cells_x} x #{cells_y}, Ширина: #{@width.to_mm} мм, Высота: #{@height.to_mm} мм"
             end
           end
         end
@@ -224,6 +225,16 @@ module Lvm444Dev
         min_y = [start_proj.y, current_proj.y].min
         max_y = [start_proj.y, current_proj.y].max
 
+        # Вычисляем внутреннюю область с учетом отступа
+        inner_min_x = min_x + @margin
+        inner_max_x = max_x - @margin
+        inner_min_y = min_y + @margin
+        inner_max_y = max_y - @margin
+
+        # Убедимся, что внутренняя область не вырождена
+        inner_min_x = inner_max_x if inner_min_x > inner_max_x
+        inner_min_y = inner_max_y if inner_min_y > inner_max_y
+
         # Рисуем прямоугольник
         view.line_stipple = ''
         view.line_width = 1
@@ -239,36 +250,39 @@ module Lvm444Dev
         # Линии прямоугольника
         view.draw(GL_LINE_LOOP, corners)
 
-        # Рисуем сетку
+        # Рисуем сетку (только внутри внутренней области)
         view.drawing_color = Sketchup::Color.new(255, 0, 0)  # красный
         view.line_width = 2
         view.line_stipple = '-'
 
         # Вертикальные линии
-        x = min_x
-        while x <= max_x + 0.001
+        x = inner_min_x
+        while x <= inner_max_x + 0.001
           view.draw(GL_LINES,
-                   Geom::Point3d.new(x, min_y, start_proj.z),
-                   Geom::Point3d.new(x, max_y, start_proj.z))
+                   Geom::Point3d.new(x, inner_min_y, start_proj.z),
+                   Geom::Point3d.new(x, inner_max_y, start_proj.z))
           x += @grid_size
         end
 
         # Горизонтальные линии
-        y = min_y
-        while y <= max_y + 0.001
+        y = inner_min_y
+        while y <= inner_max_y + 0.001
           view.draw(GL_LINES,
-                   Geom::Point3d.new(min_x, y, start_proj.z),
-                   Geom::Point3d.new(max_x, y, start_proj.z))
+                   Geom::Point3d.new(inner_min_x, y, start_proj.z),
+                   Geom::Point3d.new(inner_max_x, y, start_proj.z))
           y += @grid_size
         end
 
         # Отображаем шаг сетки
         if @width > 0 && @height > 0
-          cells_x = (@width / @grid_size).ceil
-          cells_y = (@height / @grid_size).ceil
+          # Количество ячеек с учетом отступа
+          inner_width = [inner_max_x - inner_min_x, 0].max
+          inner_height = [inner_max_y - inner_min_y, 0].max
+          cells_x = (inner_width / @grid_size).ceil
+          cells_y = (inner_height / @grid_size).ceil
 
           text_point = Geom::Point3d.new(max_x + 0.5.m, max_y + 0.5.m, start_proj.z)
-          view.draw_text(text_point, "Шаг: #{@grid_size.to_m}\nЯчеек: #{cells_x} x #{cells_y}")
+          view.draw_text(text_point, "Шаг: #{@grid_size.to_mm} мм, Отступ: #{@margin.to_mm} мм\nЯчеек: #{cells_x} x #{cells_y}")
         end
       end
 
@@ -293,19 +307,29 @@ module Lvm444Dev
         min_y = [start_proj.y, current_proj.y].min
         max_y = [start_proj.y, current_proj.y].max
 
+        # Вычисляем внутреннюю область с учетом отступа
+        inner_min_x = min_x + @margin
+        inner_max_x = max_x - @margin
+        inner_min_y = min_y + @margin
+        inner_max_y = max_y - @margin
+
+        # Убедимся, что внутренняя область не вырождена
+        inner_min_x = inner_max_x if inner_min_x > inner_max_x
+        inner_min_y = inner_max_y if inner_min_y > inner_max_y
+
         # Создаем группу для сетки
         entities = model.active_entities
         group = entities.add_group
         group.name = "Сетка привязки #{Time.now.strftime('%H:%M:%S')}"
 
-        # Создаем линии сетки
+        # Создаем линии сетки (только внутри внутренней области)
         edges = []
 
         # Вертикальные линии
-        x = min_x
-        while x <= max_x + 0.001
-          p1 = Geom::Point3d.new(x, min_y, start_proj.z)
-          p2 = Geom::Point3d.new(x, max_y, start_proj.z)
+        x = inner_min_x
+        while x <= inner_max_x + 0.001
+          p1 = Geom::Point3d.new(x, inner_min_y, start_proj.z)
+          p2 = Geom::Point3d.new(x, inner_max_y, start_proj.z)
           edge = group.entities.add_line(p1, p2)
           edge.set_attribute("grid", "vertical", true)
           edges << edge
@@ -313,10 +337,10 @@ module Lvm444Dev
         end
 
         # Горизонтальные линии
-        y = min_y
-        while y <= max_y + 0.001
-          p1 = Geom::Point3d.new(min_x, y, start_proj.z)
-          p2 = Geom::Point3d.new(max_x, y, start_proj.z)
+        y = inner_min_y
+        while y <= inner_max_y + 0.001
+          p1 = Geom::Point3d.new(inner_min_x, y, start_proj.z)
+          p2 = Geom::Point3d.new(inner_max_x, y, start_proj.z)
           edge = group.entities.add_line(p1, p2)
           edge.set_attribute("grid", "horizontal", true)
           edges << edge
@@ -324,11 +348,19 @@ module Lvm444Dev
         end
 
         # Добавляем атрибуты
+        inner_width = [inner_max_x - inner_min_x, 0].max
+        inner_height = [inner_max_y - inner_min_y, 0].max
+        cells_x = (inner_width / @grid_size).ceil
+        cells_y = (inner_height / @grid_size).ceil
+
         group.set_attribute("grid", "step", @grid_size)
+        group.set_attribute("grid", "margin", @margin)
         group.set_attribute("grid", "width", max_x - min_x)
         group.set_attribute("grid", "height", max_y - min_y)
-        group.set_attribute("grid", "cells_x", ((max_x - min_x) / @grid_size).ceil)
-        group.set_attribute("grid", "cells_y", ((max_y - min_y) / @grid_size).ceil)
+        group.set_attribute("grid", "inner_width", inner_width)
+        group.set_attribute("grid", "inner_height", inner_height)
+        group.set_attribute("grid", "cells_x", cells_x)
+        group.set_attribute("grid", "cells_y", cells_y)
         group.set_attribute("grid", "plane_normal", normal.to_a)
         group.set_attribute("grid", "plane_origin", plane_origin.to_a)
 
@@ -357,16 +389,18 @@ module Lvm444Dev
     # Диалог для настройки шага сетки
     module GridSettings
       def self.show_dialog
-        prompts = ["Шаг сетки (м):"]
-        defaults = ["1.0"]
+        prompts = ["Шаг сетки (мм):", "Отступ от краев (мм):"]
+        defaults = ["26.0", "100.0"]
         results = UI.inputbox(prompts, defaults, "Настройки сетки")
 
         if results
-          step = results[0].to_f.m
+          step = results[0].to_f.mm
+          margin = results[1].to_f.mm
           # Сохраняем в настройки
           model = Sketchup.active_model
           model.set_attribute("skpelectrics_grid", "step", step)
-          return step
+          model.set_attribute("skpelectrics_grid", "margin", margin)
+          return step, margin
         end
         nil
       end
@@ -374,7 +408,13 @@ module Lvm444Dev
       def self.get_step
         model = Sketchup.active_model
         step = model.get_attribute("skpelectrics_grid", "step")
-        step ? step : 1.0.m
+        step ? step : 26.0.mm
+      end
+
+      def self.get_margin
+        model = Sketchup.active_model
+        margin = model.get_attribute("skpelectrics_grid", "margin")
+        margin ? margin : 100.0.mm
       end
     end
 
@@ -385,9 +425,9 @@ module Lvm444Dev
     end
 
     def self.show_settings
-      step = GridSettings.show_dialog
-      if step
-        UI.messagebox("Шаг сетки установлен: #{step.to_m} м")
+      result = GridSettings.show_dialog
+      if result
+        UI.messagebox("Параметры сетки установлены: шаг #{result[0].to_mm} мм, отступ #{result[1].to_mm} мм")
       end
     end
 
