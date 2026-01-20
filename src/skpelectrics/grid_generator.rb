@@ -49,7 +49,7 @@ module Lvm444Dev
 
       def onKeyDown(key, repeat, flags, view)
         case key
-        when VK_RETURN
+        when UI::KeyReturn
           if @state == :select_plane && @points.empty?
             # Используем плоскость XY по умолчанию
             @plane = [Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1)]
@@ -58,7 +58,7 @@ module Lvm444Dev
             view.invalidate
             return true
           end
-        when VK_ESCAPE
+        when UI::KeyEscape
           onCancel(0, view)
           return true
         end
@@ -161,15 +161,27 @@ module Lvm444Dev
         vector1 = p2 - p1
         vector2 = p3 - p1
         normal = vector1 * vector2  # cross product
-        normal.normalize!
+
+        # Если точки коллинеарны, используем плоскость XY по умолчанию
+        if normal.length == 0
+          normal = Geom::Vector3d.new(0, 0, 1)
+        else
+          normal.normalize!
+        end
         [p1, normal]
       end
 
       def project_to_plane(point, plane_origin, normal)
-        # Проекция точки на плоскость
+        normal = Geom::Vector3d.new(normal) unless normal.is_a?(Geom::Vector3d)
+        normal.normalize!
+
+        plane_origin = Geom::Point3d.new(plane_origin) unless plane_origin.is_a?(Geom::Point3d)
+        point = Geom::Point3d.new(point) unless point.is_a?(Geom::Point3d)
+
         vector = point - plane_origin
         distance = vector.dot(normal)
-        point - normal * distance
+
+        point.offset(normal, -distance)
       end
 
       def draw_plane_selection(view)
@@ -181,7 +193,7 @@ module Lvm444Dev
         view.drawing_color = Sketchup::Color.new(255, 0, 0)
 
         @points.each do |point|
-          view.draw_points(point, 10, 1, 'X')
+          view.draw_points(point, 10, 2)  # 2 = cross marker
         end
 
         # Рисуем линии между точками
