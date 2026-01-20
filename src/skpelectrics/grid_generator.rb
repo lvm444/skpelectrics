@@ -98,7 +98,7 @@ module Lvm444Dev
               cells_y = (@height / @grid_size).ceil
 
               Sketchup.status_text = "Сетка: #{cells_x} x #{cells_y} ячеек, шаг: #{@grid_size.to_m}"
-              view.tooltip = "Ширина: #{@width.to_m}, Высота: #{@height.to_m}"
+              view.tooltip = "Шаг: #{@grid_size.to_m}, Ячеек: #{cells_x} x #{cells_y}, Ширина: #{@width.to_m}, Высота: #{@height.to_m}"
             end
           end
         end
@@ -240,7 +240,8 @@ module Lvm444Dev
         view.draw(GL_LINE_LOOP, corners)
 
         # Рисуем сетку
-        view.drawing_color = Sketchup::Color.new(0, 255, 0, 128)
+        view.drawing_color = Sketchup::Color.new(255, 0, 0)  # красный
+        view.line_width = 2
         view.line_stipple = '-'
 
         # Вертикальные линии
