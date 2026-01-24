@@ -53,7 +53,13 @@ module Lvm444Dev
         when UI::KeyReturn
           if @state == :select_plane && @points.empty?
             # Используем плоскость XY по умолчанию
-            @plane = [Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1)]
+            origin = Geom::Point3d.new(0, 0, 0)
+            normal = Geom::Vector3d.new(0, 0, 1)
+            z = normal
+            x = Geom::Vector3d.new(1, 0, 0)
+            y = Geom::Vector3d.new(0, 1, 0)
+            transformation = Geom::Transformation.axes(origin, x, y, z)
+            @plane = [origin, normal, transformation, transformation.inverse]
             @state = :drag_grid
             Sketchup.status_text = "Задайте размер сетки: кликните и растяните прямоугольник"
             view.invalidate
@@ -79,28 +85,26 @@ module Lvm444Dev
             view.tooltip = @mouse_ip.tooltip
           end
         when :drag_grid
-          if @points.size == 3
+          if @points.size == 3 && @plane
             # Третья точка - это начало сетки, четвертая - противоположный угол
             start = @points[2]
             current = @mouse_ip.position
 
-            # Проекция на плоскость
-            if @plane
-              normal = @plane[1]
-              plane_origin = @plane[0]
-              current_proj = project_to_plane(current, plane_origin, normal)
-              start_proj = project_to_plane(start, plane_origin, normal)
+            transformation_inv = @plane[3]
+            start_local = point_to_local(start, transformation_inv)
+            current_local = point_to_local(current, transformation_inv)
 
-              @width = (current_proj.x - start_proj.x).abs
-              @height = (current_proj.y - start_proj.y).abs
+            @width = (current_local.x - start_local.x).abs
+            @height = (current_local.y - start_local.y).abs
 
-              # Вычисляем количество ячеек
-              cells_x = (@width / @grid_size).ceil
-              cells_y = (@height / @grid_size).ceil
+            # Вычисляем количество ячеек с учетом отступа
+            inner_width = [@width - 2 * @margin, 0].max
+            inner_height = [@height - 2 * @margin, 0].max
+            cells_x = (inner_width / @grid_size).ceil
+            cells_y = (inner_height / @grid_size).ceil
 
-              Sketchup.status_text = "Сетка: #{cells_x} x #{cells_y} ячеек, шаг: #{@grid_size.to_mm} мм"
-              view.tooltip = "Шаг: #{@grid_size.to_mm} мм, Ячеек: #{cells_x} x #{cells_y}, Ширина: #{@width.to_mm} мм, Высота: #{@height.to_mm} мм"
-            end
+            Sketchup.status_text = "Сетка: #{cells_x} x #{cells_y} ячеек, шаг: #{@grid_size.to_mm} мм"
+            view.tooltip = "Шаг: #{@grid_size.to_mm} мм, Ячеек: #{cells_x} x #{cells_y}, Ширина: #{@width.to_mm} мм, Высота: #{@height.to_mm} мм"
           end
         end
 
@@ -169,7 +173,16 @@ module Lvm444Dev
         else
           normal.normalize!
         end
-        [p1, normal]
+
+        # Создаем локальную систему координат на плоскости
+        z = normal
+        x = z.parallel?(Geom::Vector3d.new(1, 0, 0)) ? z.cross(Geom::Vector3d.new(0, 1, 0)) : z.cross(Geom::Vector3d.new(1, 0, 0))
+        x.normalize!
+        y = z.cross(x)
+        y.normalize!
+
+        transformation = Geom::Transformation.axes(p1, x, y, z)
+        [p1, normal, transformation, transformation.inverse]
       end
 
       def project_to_plane(point, plane_origin, normal)
@@ -183,6 +196,14 @@ module Lvm444Dev
         distance = vector.dot(normal)
 
         point.offset(normal, -distance)
+      end
+
+      def point_to_local(point, transformation_inv)
+        point.transform(transformation_inv)
+      end
+
+      def point_from_local(local_point, transformation)
+        local_point.transform(transformation)
       end
 
       def draw_plane_selection(view)
@@ -211,19 +232,21 @@ module Lvm444Dev
         return if @points.size < 3 || !@plane
 
         start = @points[2]
-        plane_origin = @plane[0]
-        normal = @plane[1]
+        transformation = @plane[2]
+        transformation_inv = @plane[3]
 
-        # Проекция текущей позиции мыши на плоскость
+        # Преобразуем точки в локальные координаты плоскости
+        start_local = point_to_local(start, transformation_inv)
+
+        # Получаем текущую позицию мыши на плоскости
         current = @mouse_ip.position
-        current_proj = project_to_plane(current, plane_origin, normal)
-        start_proj = project_to_plane(start, plane_origin, normal)
+        current_local = point_to_local(current, transformation_inv)
 
-        # Определяем углы прямоугольника
-        min_x = [start_proj.x, current_proj.x].min
-        max_x = [start_proj.x, current_proj.x].max
-        min_y = [start_proj.y, current_proj.y].min
-        max_y = [start_proj.y, current_proj.y].max
+        # Определяем углы прямоугольника в локальных координатах
+        min_x = [start_local.x, current_local.x].min
+        max_x = [start_local.x, current_local.x].max
+        min_y = [start_local.y, current_local.y].min
+        max_y = [start_local.y, current_local.y].max
 
         # Вычисляем внутреннюю область с учетом отступа
         inner_min_x = min_x + @margin
@@ -240,15 +263,18 @@ module Lvm444Dev
         view.line_width = 1
         view.drawing_color = Sketchup::Color.new(0, 0, 255)
 
-        corners = [
-          Geom::Point3d.new(min_x, min_y, start_proj.z),
-          Geom::Point3d.new(max_x, min_y, start_proj.z),
-          Geom::Point3d.new(max_x, max_y, start_proj.z),
-          Geom::Point3d.new(min_x, max_y, start_proj.z)
+        # Углы прямоугольника в локальных координатах, преобразованные в мировые
+        corners_local = [
+          Geom::Point3d.new(min_x, min_y, 0),
+          Geom::Point3d.new(max_x, min_y, 0),
+          Geom::Point3d.new(max_x, max_y, 0),
+          Geom::Point3d.new(min_x, max_y, 0)
         ]
 
+        corners_world = corners_local.map { |p| point_from_local(p, transformation) }
+
         # Линии прямоугольника
-        view.draw(GL_LINE_LOOP, corners)
+        view.draw(GL_LINE_LOOP, corners_world)
 
         # Рисуем сетку (только внутри внутренней области)
         view.drawing_color = Sketchup::Color.new(255, 0, 0, 128)  # полупрозрачный красный
@@ -258,31 +284,37 @@ module Lvm444Dev
         # Вертикальные линии
         x = inner_min_x
         while x <= inner_max_x + 0.001
-          view.draw(GL_LINES,
-                   Geom::Point3d.new(x, inner_min_y, start_proj.z),
-                   Geom::Point3d.new(x, inner_max_y, start_proj.z))
+          p1_local = Geom::Point3d.new(x, inner_min_y, 0)
+          p2_local = Geom::Point3d.new(x, inner_max_y, 0)
+          p1_world = point_from_local(p1_local, transformation)
+          p2_world = point_from_local(p2_local, transformation)
+          view.draw(GL_LINES, p1_world, p2_world)
           x += @grid_size
         end
 
         # Горизонтальные линии
         y = inner_min_y
         while y <= inner_max_y + 0.001
-          view.draw(GL_LINES,
-                   Geom::Point3d.new(inner_min_x, y, start_proj.z),
-                   Geom::Point3d.new(inner_max_x, y, start_proj.z))
+          p1_local = Geom::Point3d.new(inner_min_x, y, 0)
+          p2_local = Geom::Point3d.new(inner_max_x, y, 0)
+          p1_world = point_from_local(p1_local, transformation)
+          p2_world = point_from_local(p2_local, transformation)
+          view.draw(GL_LINES, p1_world, p2_world)
           y += @grid_size
         end
 
         # Отображаем шаг сетки
-        if @width > 0 && @height > 0
+        if inner_max_x > inner_min_x && inner_max_y > inner_min_y
           # Количество ячеек с учетом отступа
-          inner_width = [inner_max_x - inner_min_x, 0].max
-          inner_height = [inner_max_y - inner_min_y, 0].max
+          inner_width = inner_max_x - inner_min_x
+          inner_height = inner_max_y - inner_min_y
           cells_x = (inner_width / @grid_size).ceil
           cells_y = (inner_height / @grid_size).ceil
 
-          text_point = Geom::Point3d.new(max_x + 0.5.m, max_y + 0.5.m, start_proj.z)
-          view.draw_text(text_point, "Шаг: #{@grid_size.to_mm} мм, Отступ: #{@margin.to_mm} мм\nЯчеек: #{cells_x} x #{cells_y}")
+          # Текстовая точка в мировых координатах
+          text_point_local = Geom::Point3d.new(max_x + 0.5.m, max_y + 0.5.m, 0)
+          text_point_world = point_from_local(text_point_local, transformation)
+          view.draw_text(text_point_world, "Шаг: #{@grid_size.to_mm} мм, Отступ: #{@margin.to_mm} мм\nЯчеек: #{cells_x} x #{cells_y}")
         end
       end
 
@@ -293,19 +325,21 @@ module Lvm444Dev
         model.start_operation('Создать сетку привязки', true)
 
         start = @points[2]
+        current = @points[3]
+        transformation = @plane[2]
+        transformation_inv = @plane[3]
         plane_origin = @plane[0]
         normal = @plane[1]
 
-        # Проекция конечной точки на плоскость
-        current = @points[3]
-        current_proj = project_to_plane(current, plane_origin, normal)
-        start_proj = project_to_plane(start, plane_origin, normal)
+        # Преобразуем точки в локальные координаты
+        start_local = point_to_local(start, transformation_inv)
+        current_local = point_to_local(current, transformation_inv)
 
-        # Определяем границы
-        min_x = [start_proj.x, current_proj.x].min
-        max_x = [start_proj.x, current_proj.x].max
-        min_y = [start_proj.y, current_proj.y].min
-        max_y = [start_proj.y, current_proj.y].max
+        # Определяем границы в локальных координатах
+        min_x = [start_local.x, current_local.x].min
+        max_x = [start_local.x, current_local.x].max
+        min_y = [start_local.y, current_local.y].min
+        max_y = [start_local.y, current_local.y].max
 
         # Вычисляем внутреннюю область с учетом отступа
         inner_min_x = min_x + @margin
@@ -328,9 +362,11 @@ module Lvm444Dev
         # Вертикальные линии
         x = inner_min_x
         while x <= inner_max_x + 0.001
-          p1 = Geom::Point3d.new(x, inner_min_y, start_proj.z)
-          p2 = Geom::Point3d.new(x, inner_max_y, start_proj.z)
-          edge = group.entities.add_line(p1, p2)
+          p1_local = Geom::Point3d.new(x, inner_min_y, 0)
+          p2_local = Geom::Point3d.new(x, inner_max_y, 0)
+          p1_world = point_from_local(p1_local, transformation)
+          p2_world = point_from_local(p2_local, transformation)
+          edge = group.entities.add_line(p1_world, p2_world)
           edge.set_attribute("grid", "vertical", true)
           edges << edge
           x += @grid_size
@@ -339,9 +375,11 @@ module Lvm444Dev
         # Горизонтальные линии
         y = inner_min_y
         while y <= inner_max_y + 0.001
-          p1 = Geom::Point3d.new(inner_min_x, y, start_proj.z)
-          p2 = Geom::Point3d.new(inner_max_x, y, start_proj.z)
-          edge = group.entities.add_line(p1, p2)
+          p1_local = Geom::Point3d.new(inner_min_x, y, 0)
+          p2_local = Geom::Point3d.new(inner_max_x, y, 0)
+          p1_world = point_from_local(p1_local, transformation)
+          p2_world = point_from_local(p2_local, transformation)
+          edge = group.entities.add_line(p1_world, p2_world)
           edge.set_attribute("grid", "horizontal", true)
           edges << edge
           y += @grid_size
@@ -352,17 +390,20 @@ module Lvm444Dev
         inner_height = [inner_max_y - inner_min_y, 0].max
         cells_x = (inner_width / @grid_size).ceil
         cells_y = (inner_height / @grid_size).ceil
+        width = max_x - min_x
+        height = max_y - min_y
 
         group.set_attribute("grid", "step", @grid_size)
         group.set_attribute("grid", "margin", @margin)
-        group.set_attribute("grid", "width", max_x - min_x)
-        group.set_attribute("grid", "height", max_y - min_y)
+        group.set_attribute("grid", "width", width)
+        group.set_attribute("grid", "height", height)
         group.set_attribute("grid", "inner_width", inner_width)
         group.set_attribute("grid", "inner_height", inner_height)
         group.set_attribute("grid", "cells_x", cells_x)
         group.set_attribute("grid", "cells_y", cells_y)
         group.set_attribute("grid", "plane_normal", normal.to_a)
         group.set_attribute("grid", "plane_origin", plane_origin.to_a)
+        group.set_attribute("grid", "transformation", transformation.to_a)
 
         model.commit_operation
 
