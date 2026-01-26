@@ -335,10 +335,10 @@ module Lvm444Dev
         # Линии прямоугольника
         view.draw(GL_LINE_LOOP, corners_world)
 
-        # Рисуем сетку (только внутри внутренней области)
-        view.drawing_color = Sketchup::Color.new(255, 0, 0, 128)  # полупрозрачный красный
+        # Рисуем сетку (только внутри внутренней области) - тонкий штрих
+        view.drawing_color = Sketchup::Color.new(255, 0, 0, 160)  # полупрозрачный красный
         view.line_width = 1
-        view.line_stipple = '.'
+        view.line_stipple = '-'  # штриховая линия
 
         # Вертикальные линии
         x = inner_min_x
