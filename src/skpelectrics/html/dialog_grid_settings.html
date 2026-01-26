@@ -99,6 +99,21 @@
       color: #0c5460;
       border: 1px solid #bee5eb;
     }
+
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .row .form-group {
+      flex: 1;
+    }
   </style>
 </head>
 
@@ -111,9 +126,26 @@
       <input type="number" id="gridStep" min="1" max="1000" step="1" value="26">
     </div>
 
-    <div class="form-group">
-      <label for="gridMargin">Отступ от краев (мм):</label>
-      <input type="number" id="gridMargin" min="0" max="1000" step="1" value="100">
+    <div class="row">
+      <div class="form-group">
+        <label for="marginLeft">Отступ слева (мм):</label>
+        <input type="number" id="marginLeft" min="0" max="1000" step="1" value="100">
+      </div>
+      <div class="form-group">
+        <label for="marginRight">Отступ справа (мм):</label>
+        <input type="number" id="marginRight" min="0" max="1000" step="1" value="100">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="marginTop">Отступ сверху (мм):</label>
+        <input type="number" id="marginTop" min="0" max="1000" step="1" value="100">
+      </div>
+      <div class="form-group">
+        <label for="marginBottom">Отступ снизу (мм):</label>
+        <input type="number" id="marginBottom" min="0" max="1000" step="1" value="100">
+      </div>
     </div>
 
     <div class="button-group">
@@ -126,9 +158,12 @@
 
   <script>
     // Инициализация значений из SketchUp
-    function initializeValues(step, margin) {
+    function initializeValues(step, marginLeft, marginRight, marginTop, marginBottom) {
       document.getElementById('gridStep').value = step;
-      document.getElementById('gridMargin').value = margin;
+      document.getElementById('marginLeft').value = marginLeft;
+      document.getElementById('marginRight').value = marginRight;
+      document.getElementById('marginTop').value = marginTop;
+      document.getElementById('marginBottom').value = marginBottom;
       showStatus('Настройки загружены', 'info');
     }
 
@@ -148,16 +183,23 @@
     // Отправить настройки в SketchUp
     function applySettings() {
       const step = document.getElementById('gridStep').value;
-      const margin = document.getElementById('gridMargin').value;
+      const marginLeft = document.getElementById('marginLeft').value;
+      const marginRight = document.getElementById('marginRight').value;
+      const marginTop = document.getElementById('marginTop').value;
+      const marginBottom = document.getElementById('marginBottom').value;
 
       // Проверка ввода
-      if (!step || step <= 0 || !margin || margin < 0) {
-        showStatus('Ошибка: введите корректные значения', 'error');
+      if (!step || step <= 0) {
+        showStatus('Ошибка: шаг сетки должен быть положительным числом', 'error');
+        return;
+      }
+      if (marginLeft < 0 || marginRight < 0 || marginTop < 0 || marginBottom < 0) {
+        showStatus('Ошибка: отступы не могут быть отрицательными', 'error');
         return;
       }
 
       // Отправка в SketchUp
-      sketchup.applyGridSettings(step, margin);
+      sketchup.applyGridSettings(step, marginLeft, marginRight, marginTop, marginBottom);
       showStatus('Настройки применены', 'success');
     }
 
@@ -172,7 +214,10 @@
 
     // Автоматическое применение при изменении значений (опционально)
     document.getElementById('gridStep').addEventListener('change', applySettings);
-    document.getElementById('gridMargin').addEventListener('change', applySettings);
+    document.getElementById('marginLeft').addEventListener('change', applySettings);
+    document.getElementById('marginRight').addEventListener('change', applySettings);
+    document.getElementById('marginTop').addEventListener('change', applySettings);
+    document.getElementById('marginBottom').addEventListener('change', applySettings);
 
     // Инициализация при загрузке
     document.addEventListener('DOMContentLoaded', function () {

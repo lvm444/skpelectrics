@@ -11,7 +11,11 @@ module Lvm444Dev
       def initialize
         @points = []
         @grid_size = 26.0.mm   # шаг сетки по умолчанию 26 мм
-        @margin = 100.0.mm     # отступ от краев по умолчанию 100 мм
+        # Отступы для каждой стороны отдельно
+        @margin_left = 100.0.mm   # отступ слева
+        @margin_right = 100.0.mm  # отступ справа
+        @margin_top = 100.0.mm    # отступ сверху
+        @margin_bottom = 100.0.mm # отступ снизу
         @plane = nil
         @width = 0
         @height = 0
@@ -24,10 +28,28 @@ module Lvm444Dev
         # Загружаем сохраненные настройки или используем значения по умолчанию
         model = Sketchup.active_model
         saved_step = model.get_attribute("skpelectrics_grid", "step")
+        saved_margin_left = model.get_attribute("skpelectrics_grid", "margin_left")
+        saved_margin_right = model.get_attribute("skpelectrics_grid", "margin_right")
+        saved_margin_top = model.get_attribute("skpelectrics_grid", "margin_top")
+        saved_margin_bottom = model.get_attribute("skpelectrics_grid", "margin_bottom")
+
+        # Для обратной совместимости: если есть старый единый отступ, используем его для всех сторон
         saved_margin = model.get_attribute("skpelectrics_grid", "margin")
 
         @grid_size = saved_step ? saved_step : 26.0.mm
-        @margin = saved_margin ? saved_margin : 100.0.mm
+
+        if saved_margin
+          # Используем старый единый отступ для всех сторон
+          @margin_left = saved_margin
+          @margin_right = saved_margin
+          @margin_top = saved_margin
+          @margin_bottom = saved_margin
+        else
+          @margin_left = saved_margin_left ? saved_margin_left : 100.0.mm
+          @margin_right = saved_margin_right ? saved_margin_right : 100.0.mm
+          @margin_top = saved_margin_top ? saved_margin_top : 100.0.mm
+          @margin_bottom = saved_margin_bottom ? saved_margin_bottom : 100.0.mm
+        end
 
         Sketchup.status_text = "Выберите плоскость для сетки: кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY). Нажмите S для показа/скрытия настроек."
         @points.clear
@@ -120,9 +142,12 @@ module Lvm444Dev
             @width = (current_local.x - start_local.x).abs
             @height = (current_local.y - start_local.y).abs
 
-            # Вычисляем количество ячеек с учетом отступа
-            inner_width = [@width - 2 * @margin, 0].max
-            inner_height = [@height - 2 * @margin, 0].max
+            # Вычисляем количество ячеек с учетом отдельных отступов для каждой стороны
+            # Для упрощения используем суммарные отступы слева+справа и сверху+снизу
+            total_margin_x = @margin_left + @margin_right
+            total_margin_y = @margin_top + @margin_bottom
+            inner_width = [@width - total_margin_x, 0].max
+            inner_height = [@height - total_margin_y, 0].max
             cells_x = (inner_width / @grid_size).ceil
             cells_y = (inner_height / @grid_size).ceil
 
@@ -271,15 +296,26 @@ module Lvm444Dev
         min_y = [start_local.y, current_local.y].min
         max_y = [start_local.y, current_local.y].max
 
-        # Вычисляем внутреннюю область с учетом отступа
-        inner_min_x = min_x + @margin
-        inner_max_x = max_x - @margin
-        inner_min_y = min_y + @margin
-        inner_max_y = max_y - @margin
+        # Вычисляем внутреннюю область с учетом отдельных отступов для каждой стороны
+        # Определяем какая сторона левая/правая и нижняя/верхняя
+        left = min_x
+        right = max_x
+        bottom = min_y
+        top = max_y
+
+        inner_left = left + @margin_left
+        inner_right = right - @margin_right
+        inner_bottom = bottom + @margin_bottom
+        inner_top = top - @margin_top
 
         # Убедимся, что внутренняя область не вырождена
-        inner_min_x = inner_max_x if inner_min_x > inner_max_x
-        inner_min_y = inner_max_y if inner_min_y > inner_max_y
+        inner_left = inner_right if inner_left > inner_right
+        inner_bottom = inner_top if inner_bottom > inner_top
+
+        inner_min_x = inner_left
+        inner_max_x = inner_right
+        inner_min_y = inner_bottom
+        inner_max_y = inner_top
 
         # Рисуем прямоугольник
         view.line_stipple = ''
@@ -337,7 +373,7 @@ module Lvm444Dev
           # Текстовая точка в мировых координатах
           text_point_local = Geom::Point3d.new(max_x + 0.5.m, max_y + 0.5.m, 0)
           text_point_world = point_from_local(text_point_local, transformation)
-          view.draw_text(text_point_world, "Шаг: #{@grid_size.to_mm} мм, Отступ: #{@margin.to_mm} мм\nЯчеек: #{cells_x} x #{cells_y}")
+          view.draw_text(text_point_world, "Шаг: #{@grid_size.to_mm} мм, Отступы: L:#{@margin_left.to_mm} R:#{@margin_right.to_mm} T:#{@margin_top.to_mm} B:#{@margin_bottom.to_mm} мм\nЯчеек: #{cells_x} x #{cells_y}")
         end
       end
 
@@ -364,15 +400,25 @@ module Lvm444Dev
         min_y = [start_local.y, current_local.y].min
         max_y = [start_local.y, current_local.y].max
 
-        # Вычисляем внутреннюю область с учетом отступа
-        inner_min_x = min_x + @margin
-        inner_max_x = max_x - @margin
-        inner_min_y = min_y + @margin
-        inner_max_y = max_y - @margin
+        # Вычисляем внутреннюю область с учетом отдельных отступов для каждой стороны
+        left = min_x
+        right = max_x
+        bottom = min_y
+        top = max_y
+
+        inner_left = left + @margin_left
+        inner_right = right - @margin_right
+        inner_bottom = bottom + @margin_bottom
+        inner_top = top - @margin_top
 
         # Убедимся, что внутренняя область не вырождена
-        inner_min_x = inner_max_x if inner_min_x > inner_max_x
-        inner_min_y = inner_max_y if inner_min_y > inner_max_y
+        inner_left = inner_right if inner_left > inner_right
+        inner_bottom = inner_top if inner_bottom > inner_top
+
+        inner_min_x = inner_left
+        inner_max_x = inner_right
+        inner_min_y = inner_bottom
+        inner_max_y = inner_top
 
         # Создаем группу для сетки
         entities = model.active_entities
@@ -417,7 +463,8 @@ module Lvm444Dev
         height = max_y - min_y
 
         group.set_attribute("grid", "step", @grid_size)
-        group.set_attribute("grid", "margin", @margin)
+        # Для обратной совместимости сохраняем левый отступ как общий
+        group.set_attribute("grid", "margin", @margin_left)
         group.set_attribute("grid", "width", width)
         group.set_attribute("grid", "height", height)
         group.set_attribute("grid", "min_x", min_x)
@@ -466,15 +513,25 @@ module Lvm444Dev
         plane_origin = Geom::Point3d.new(plane_origin_array)
         normal = Geom::Vector3d.new(normal_array)
 
-        # Вычисляем внутреннюю область с учетом отступа
-        inner_min_x = min_x + @margin
-        inner_max_x = max_x - @margin
-        inner_min_y = min_y + @margin
-        inner_max_y = max_y - @margin
+        # Вычисляем внутреннюю область с учетом отдельных отступов для каждой стороны
+        left = min_x
+        right = max_x
+        bottom = min_y
+        top = max_y
+
+        inner_left = left + @margin_left
+        inner_right = right - @margin_right
+        inner_bottom = bottom + @margin_bottom
+        inner_top = top - @margin_top
 
         # Убедимся, что внутренняя область не вырождена
-        inner_min_x = inner_max_x if inner_min_x > inner_max_x
-        inner_min_y = inner_max_y if inner_min_y > inner_max_y
+        inner_left = inner_right if inner_left > inner_right
+        inner_bottom = inner_top if inner_bottom > inner_top
+
+        inner_min_x = inner_left
+        inner_max_x = inner_right
+        inner_min_y = inner_bottom
+        inner_max_y = inner_top
 
         # Удаляем все существующие entities в группе
         group.entities.clear!
@@ -517,7 +574,8 @@ module Lvm444Dev
         height = max_y - min_y
 
         group.set_attribute("grid", "step", @grid_size)
-        group.set_attribute("grid", "margin", @margin)
+        # Для обратной совместимости сохраняем левый отступ как общий
+        group.set_attribute("grid", "margin", @margin_left)
         group.set_attribute("grid", "width", width)
         group.set_attribute("grid", "height", height)
         group.set_attribute("grid", "inner_width", inner_width)
@@ -532,10 +590,28 @@ module Lvm444Dev
         # Загружаем сохраненные настройки
         model = Sketchup.active_model
         saved_step = model.get_attribute("skpelectrics_grid", "step")
+        saved_margin_left = model.get_attribute("skpelectrics_grid", "margin_left")
+        saved_margin_right = model.get_attribute("skpelectrics_grid", "margin_right")
+        saved_margin_top = model.get_attribute("skpelectrics_grid", "margin_top")
+        saved_margin_bottom = model.get_attribute("skpelectrics_grid", "margin_bottom")
+
+        # Для обратной совместимости: если есть старый единый отступ, используем его для всех сторон
         saved_margin = model.get_attribute("skpelectrics_grid", "margin")
 
         @grid_size = saved_step ? saved_step : 26.0.mm
-        @margin = saved_margin ? saved_margin : 100.0.mm
+
+        if saved_margin
+          # Используем старый единый отступ для всех сторон
+          @margin_left = saved_margin
+          @margin_right = saved_margin
+          @margin_top = saved_margin
+          @margin_bottom = saved_margin
+        else
+          @margin_left = saved_margin_left ? saved_margin_left : 100.0.mm
+          @margin_right = saved_margin_right ? saved_margin_right : 100.0.mm
+          @margin_top = saved_margin_top ? saved_margin_top : 100.0.mm
+          @margin_bottom = saved_margin_bottom ? saved_margin_bottom : 100.0.mm
+        end
 
         @points.clear
         @state = :select_plane
@@ -592,8 +668,8 @@ module Lvm444Dev
           :dialog_title => "Настройки сетки",
           :preferences_key => "Lvm444Dev.GridGenerator.GridSettingsDialog",
           :style => UI::HtmlDialog::STYLE_DIALOG,
-          :width => 300,
-          :height => 250,
+          :width => 350,
+          :height => 320,
           :resizable => false
         }
         dialog = UI::HtmlDialog.new(options)
@@ -603,13 +679,27 @@ module Lvm444Dev
         # Callbacks
         dialog.add_action_callback("dialog_ready") do |action_context|
           # Загружаем текущие настройки
-          step = GridSettings.get_step.to_mm.to_f
-          margin = GridSettings.get_margin.to_mm.to_f
-          dialog.execute_script("initializeValues(#{step}, #{margin})")
+          model = Sketchup.active_model
+          step = model.get_attribute("skpelectrics_grid", "step")
+          step = step ? step.to_mm.to_f : 26.0
+
+          margin_left = model.get_attribute("skpelectrics_grid", "margin_left")
+          margin_left = margin_left ? margin_left.to_mm.to_f : 100.0
+
+          margin_right = model.get_attribute("skpelectrics_grid", "margin_right")
+          margin_right = margin_right ? margin_right.to_mm.to_f : 100.0
+
+          margin_top = model.get_attribute("skpelectrics_grid", "margin_top")
+          margin_top = margin_top ? margin_top.to_mm.to_f : 100.0
+
+          margin_bottom = model.get_attribute("skpelectrics_grid", "margin_bottom")
+          margin_bottom = margin_bottom ? margin_bottom.to_mm.to_f : 100.0
+
+          dialog.execute_script("initializeValues(#{step}, #{margin_left}, #{margin_right}, #{margin_top}, #{margin_bottom})")
         end
 
-        dialog.add_action_callback("applyGridSettings") do |action_context, step, margin|
-          apply_settings(step.to_f.mm, margin.to_f.mm, tool)
+        dialog.add_action_callback("applyGridSettings") do |action_context, step, margin_left, margin_right, margin_top, margin_bottom|
+          apply_settings(step.to_f.mm, margin_left.to_f.mm, margin_right.to_f.mm, margin_top.to_f.mm, margin_bottom.to_f.mm, tool)
           dialog.execute_script("showStatus('Настройки применены', 'success')")
         end
 
@@ -620,16 +710,22 @@ module Lvm444Dev
         dialog
       end
 
-      def self.apply_settings(step, margin, tool = nil)
+      def self.apply_settings(step, margin_left, margin_right, margin_top, margin_bottom, tool = nil)
         # Сохраняем настройки
         model = Sketchup.active_model
         model.set_attribute("skpelectrics_grid", "step", step)
-        model.set_attribute("skpelectrics_grid", "margin", margin)
+        model.set_attribute("skpelectrics_grid", "margin_left", margin_left)
+        model.set_attribute("skpelectrics_grid", "margin_right", margin_right)
+        model.set_attribute("skpelectrics_grid", "margin_top", margin_top)
+        model.set_attribute("skpelectrics_grid", "margin_bottom", margin_bottom)
 
         # Обновляем текущий инструмент, если он активен
         if tool && tool.is_a?(GridTool)
           tool.instance_variable_set(:@grid_size, step)
-          tool.instance_variable_set(:@margin, margin)
+          tool.instance_variable_set(:@margin_left, margin_left)
+          tool.instance_variable_set(:@margin_right, margin_right)
+          tool.instance_variable_set(:@margin_top, margin_top)
+          tool.instance_variable_set(:@margin_bottom, margin_bottom)
 
           # Обновляем существующую сетку, если есть
           drawn_grid = tool.instance_variable_get(:@drawn_grid)
@@ -639,7 +735,7 @@ module Lvm444Dev
 
           # Обновляем предпросмотр
           Sketchup.active_model.active_view.invalidate if Sketchup.active_model.active_view
-          Sketchup.status_text = "Настройки сетки обновлены: шаг #{step.to_mm} мм, отступ #{margin.to_mm} мм"
+          Sketchup.status_text = "Настройки сетки обновлены: шаг #{step.to_mm} мм, отступы L:#{margin_left.to_mm} R:#{margin_right.to_mm} T:#{margin_top.to_mm} B:#{margin_bottom.to_mm} мм"
         end
       end
 
