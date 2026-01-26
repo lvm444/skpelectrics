@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Настройки сетки</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      margin: 0;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background-color: white;
+      border-radius: 5px;
+      padding: 15px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    #applyBtn {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    #applyBtn:hover {
+      background-color: #45a049;
+    }
+
+    #closeBtn {
+      background-color: #f44336;
+      color: white;
+    }
+
+    #closeBtn:hover {
+      background-color: #d32f2f;
+    }
+
+    #status {
+      margin-top: 10px;
+      padding: 8px;
+      border-radius: 3px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Настройки сетки привязки</h2>
+
+    <div class="form-group">
+      <label for="gridStep">Шаг сетки (мм):</label>
+      <input type="number" id="gridStep" min="1" max="1000" step="1" value="26">
+    </div>
+
+    <div class="form-group">
+      <label for="gridMargin">Отступ от краев (мм):</label>
+      <input type="number" id="gridMargin" min="0" max="1000" step="1" value="100">
+    </div>
+
+    <div class="button-group">
+      <button id="applyBtn">Применить</button>
+      <button id="closeBtn">Закрыть</button>
+    </div>
+
+    <div id="status"></div>
+  </div>
+
+  <script>
+    // Инициализация значений из SketchUp
+    function initializeValues(step, margin) {
+      document.getElementById('gridStep').value = step;
+      document.getElementById('gridMargin').value = margin;
+      showStatus('Настройки загружены', 'info');
+    }
+
+    // Показать статус
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = type;
+      statusEl.style.display = 'block';
+
+      // Автоматически скрыть через 3 секунды
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 3000);
+    }
+
+    // Отправить настройки в SketchUp
+    function applySettings() {
+      const step = document.getElementById('gridStep').value;
+      const margin = document.getElementById('gridMargin').value;
+
+      // Проверка ввода
+      if (!step || step <= 0 || !margin || margin < 0) {
+        showStatus('Ошибка: введите корректные значения', 'error');
+        return;
+      }
+
+      // Отправка в SketchUp
+      sketchup.applyGridSettings(step, margin);
+      showStatus('Настройки применены', 'success');
+    }
+
+    // Закрыть диалог
+    function closeDialog() {
+      sketchup.closeGridSettings();
+    }
+
+    // Обработчики событий
+    document.getElementById('applyBtn').addEventListener('click', applySettings);
+    document.getElementById('closeBtn').addEventListener('click', closeDialog);
+
+    // Автоматическое применение при изменении значений (опционально)
+    document.getElementById('gridStep').addEventListener('change', applySettings);
+    document.getElementById('gridMargin').addEventListener('change', applySettings);
+
+    // Инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function () {
+      // Запросить текущие настройки у SketchUp
+      window.location = 'skp:dialog_ready';
+    });
+  </script>
+</body>
+
+</html>

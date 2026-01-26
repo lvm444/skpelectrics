@@ -21,17 +21,30 @@ module Lvm444Dev
       end
 
       def activate
-        Sketchup.status_text = "Выберите плоскость для сетки: кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY)"
+        # Загружаем сохраненные настройки или используем значения по умолчанию
+        model = Sketchup.active_model
+        saved_step = model.get_attribute("skpelectrics_grid", "step")
+        saved_margin = model.get_attribute("skpelectrics_grid", "margin")
+
+        @grid_size = saved_step ? saved_step : 26.0.mm
+        @margin = saved_margin ? saved_margin : 100.0.mm
+
+        Sketchup.status_text = "Выберите плоскость для сетки: кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY). Нажмите S для показа/скрытия настроек."
         @points.clear
         @state = :select_plane
         @plane = nil
         @width = 0
         @height = 0
+
+        # Открываем диалог настроек
+        GridSettingsDialog.show_dialog(self)
       end
 
       def deactivate(view)
         view.invalidate if @drawn_grid
         @drawn_grid = nil
+        # Закрываем диалог настроек при деактивации инструмента
+        GridSettingsDialog.close_dialog
       end
 
       def resume(view)
@@ -67,6 +80,16 @@ module Lvm444Dev
           end
         when UI::KeyEscape
           onCancel(0, view)
+          return true
+        when 83, 115 # Клавиша S (верхний и нижний регистр)
+          # Переключаем видимость диалога настроек
+          if GridSettingsDialog.dialog_visible?
+            GridSettingsDialog.close_dialog
+            Sketchup.status_text = "Диалог настроек скрыт"
+          else
+            GridSettingsDialog.show_dialog(self)
+            Sketchup.status_text = "Диалог настроек открыт"
+          end
           return true
         end
         false
@@ -397,6 +420,10 @@ module Lvm444Dev
         group.set_attribute("grid", "margin", @margin)
         group.set_attribute("grid", "width", width)
         group.set_attribute("grid", "height", height)
+        group.set_attribute("grid", "min_x", min_x)
+        group.set_attribute("grid", "min_y", min_y)
+        group.set_attribute("grid", "max_x", max_x)
+        group.set_attribute("grid", "max_y", max_y)
         group.set_attribute("grid", "inner_width", inner_width)
         group.set_attribute("grid", "inner_height", inner_height)
         group.set_attribute("grid", "cells_x", cells_x)
@@ -415,19 +442,113 @@ module Lvm444Dev
         @drawn_grid = group
       end
 
+      def update_existing_grid(group)
+        return unless group.valid?
+
+        model = Sketchup.active_model
+        model.start_operation('Обновить сетку привязки', true)
+
+        # Получаем параметры из атрибутов группы
+        transformation_array = group.get_attribute("grid", "transformation")
+        plane_origin_array = group.get_attribute("grid", "plane_origin")
+        normal_array = group.get_attribute("grid", "plane_normal")
+        min_x = group.get_attribute("grid", "min_x")
+        min_y = group.get_attribute("grid", "min_y")
+        max_x = group.get_attribute("grid", "max_x")
+        max_y = group.get_attribute("grid", "max_y")
+
+        return unless transformation_array && plane_origin_array && normal_array
+        return unless min_x && min_y && max_x && max_y
+
+        # Восстанавливаем геометрические объекты
+        transformation = Geom::Transformation.new(transformation_array)
+        transformation_inv = transformation.inverse
+        plane_origin = Geom::Point3d.new(plane_origin_array)
+        normal = Geom::Vector3d.new(normal_array)
+
+        # Вычисляем внутреннюю область с учетом отступа
+        inner_min_x = min_x + @margin
+        inner_max_x = max_x - @margin
+        inner_min_y = min_y + @margin
+        inner_max_y = max_y - @margin
+
+        # Убедимся, что внутренняя область не вырождена
+        inner_min_x = inner_max_x if inner_min_x > inner_max_x
+        inner_min_y = inner_max_y if inner_min_y > inner_max_y
+
+        # Удаляем все существующие entities в группе
+        group.entities.clear!
+
+        # Создаем новые линии сетки
+        edges = []
+
+        # Вертикальные линии
+        x = inner_min_x
+        while x <= inner_max_x + 0.001
+          p1_local = Geom::Point3d.new(x, inner_min_y, 0)
+          p2_local = Geom::Point3d.new(x, inner_max_y, 0)
+          p1_world = point_from_local(p1_local, transformation)
+          p2_world = point_from_local(p2_local, transformation)
+          edge = group.entities.add_line(p1_world, p2_world)
+          edge.set_attribute("grid", "vertical", true)
+          edges << edge
+          x += @grid_size
+        end
+
+        # Горизонтальные линии
+        y = inner_min_y
+        while y <= inner_max_y + 0.001
+          p1_local = Geom::Point3d.new(inner_min_x, y, 0)
+          p2_local = Geom::Point3d.new(inner_max_x, y, 0)
+          p1_world = point_from_local(p1_local, transformation)
+          p2_world = point_from_local(p2_local, transformation)
+          edge = group.entities.add_line(p1_world, p2_world)
+          edge.set_attribute("grid", "horizontal", true)
+          edges << edge
+          y += @grid_size
+        end
+
+        # Обновляем атрибуты
+        inner_width = [inner_max_x - inner_min_x, 0].max
+        inner_height = [inner_max_y - inner_min_y, 0].max
+        cells_x = (inner_width / @grid_size).ceil
+        cells_y = (inner_height / @grid_size).ceil
+        width = max_x - min_x
+        height = max_y - min_y
+
+        group.set_attribute("grid", "step", @grid_size)
+        group.set_attribute("grid", "margin", @margin)
+        group.set_attribute("grid", "width", width)
+        group.set_attribute("grid", "height", height)
+        group.set_attribute("grid", "inner_width", inner_width)
+        group.set_attribute("grid", "inner_height", inner_height)
+        group.set_attribute("grid", "cells_x", cells_x)
+        group.set_attribute("grid", "cells_y", cells_y)
+
+        model.commit_operation
+      end
+
       def reset_tool
+        # Загружаем сохраненные настройки
+        model = Sketchup.active_model
+        saved_step = model.get_attribute("skpelectrics_grid", "step")
+        saved_margin = model.get_attribute("skpelectrics_grid", "margin")
+
+        @grid_size = saved_step ? saved_step : 26.0.mm
+        @margin = saved_margin ? saved_margin : 100.0.mm
+
         @points.clear
         @state = :select_plane
         @plane = nil
         @width = 0
         @height = 0
         @drawn_grid = nil
-        Sketchup.status_text = "Выберите плоскость для сетки: кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY)"
+        Sketchup.status_text = "Выберите плоскость для сетки: кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY). Нажмите S для настроек."
       end
 
     end # class GridTool
 
-    # Диалог для настройки шага сетки
+    # Диалог для настройки шага сетки (старый модальный)
     module GridSettings
       def self.show_dialog
         prompts = ["Шаг сетки (мм):", "Отступ от краев (мм):"]
@@ -456,6 +577,89 @@ module Lvm444Dev
         model = Sketchup.active_model
         margin = model.get_attribute("skpelectrics_grid", "margin")
         margin ? margin : 100.0.mm
+      end
+    end
+
+    # Немодальный диалог настроек сетки
+    module GridSettingsDialog
+      @dialog = nil
+      @current_tool = nil
+
+      def self.create_dialog(tool = nil)
+        @current_tool = tool
+        html_file = File.join(__dir__, 'html', 'dialog_grid_settings.html')
+        options = {
+          :dialog_title => "Настройки сетки",
+          :preferences_key => "Lvm444Dev.GridGenerator.GridSettingsDialog",
+          :style => UI::HtmlDialog::STYLE_DIALOG,
+          :width => 300,
+          :height => 250,
+          :resizable => false
+        }
+        dialog = UI::HtmlDialog.new(options)
+        dialog.center
+        dialog.set_file(html_file)
+
+        # Callbacks
+        dialog.add_action_callback("dialog_ready") do |action_context|
+          # Загружаем текущие настройки
+          step = GridSettings.get_step.to_mm.to_f
+          margin = GridSettings.get_margin.to_mm.to_f
+          dialog.execute_script("initializeValues(#{step}, #{margin})")
+        end
+
+        dialog.add_action_callback("applyGridSettings") do |action_context, step, margin|
+          apply_settings(step.to_f.mm, margin.to_f.mm, tool)
+          dialog.execute_script("showStatus('Настройки применены', 'success')")
+        end
+
+        dialog.add_action_callback("closeGridSettings") do |action_context|
+          dialog.close
+        end
+
+        dialog
+      end
+
+      def self.apply_settings(step, margin, tool = nil)
+        # Сохраняем настройки
+        model = Sketchup.active_model
+        model.set_attribute("skpelectrics_grid", "step", step)
+        model.set_attribute("skpelectrics_grid", "margin", margin)
+
+        # Обновляем текущий инструмент, если он активен
+        if tool && tool.is_a?(GridTool)
+          tool.instance_variable_set(:@grid_size, step)
+          tool.instance_variable_set(:@margin, margin)
+
+          # Обновляем существующую сетку, если есть
+          drawn_grid = tool.instance_variable_get(:@drawn_grid)
+          if drawn_grid && drawn_grid.valid?
+            tool.send(:update_existing_grid, drawn_grid)
+          end
+
+          # Обновляем предпросмотр
+          Sketchup.active_model.active_view.invalidate if Sketchup.active_model.active_view
+          Sketchup.status_text = "Настройки сетки обновлены: шаг #{step.to_mm} мм, отступ #{margin.to_mm} мм"
+        end
+      end
+
+      def self.show_dialog(tool = nil)
+        if @dialog && @dialog.visible?
+          @dialog.bring_to_front
+          return @dialog
+        end
+
+        @dialog = create_dialog(tool)
+        @dialog.show
+        @dialog
+      end
+
+      def self.close_dialog
+        @dialog.close if @dialog && @dialog.visible?
+      end
+
+      def self.dialog_visible?
+        @dialog && @dialog.visible?
       end
     end
 
