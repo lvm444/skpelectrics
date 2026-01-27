@@ -18,6 +18,15 @@
       border-radius: 5px;
       padding: 15px;
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: border-left-color 0.3s ease;
+    }
+
+    .container.rectangle-mode {
+      border-left: 4px solid #4CAF50;
+    }
+
+    .container.contour-mode {
+      border-left: 4px solid #FF9800;
     }
 
     h2 {
@@ -114,12 +123,63 @@
     .row .form-group {
       flex: 1;
     }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      font-weight: normal;
+      cursor: pointer;
+    }
+
+    .radio-group input[type="radio"] {
+      margin-right: 8px;
+      width: auto;
+    }
+
+    .mode-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .rectangle-indicator {
+      background-color: #4CAF50;
+    }
+
+    .contour-indicator {
+      background-color: #FF9800;
+    }
   </style>
 </head>
 
 <body>
-  <div class="container">
+  <div class="container rectangle-mode" id="dialogContainer">
     <h2>Настройки сетки привязки</h2>
+
+    <div class="form-group">
+      <label>Режим формирования сетки:</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="gridMode" value="rectangle" checked>
+          <span class="mode-indicator rectangle-indicator"></span>
+          Прямоугольник (4 точки)
+        </label>
+        <label>
+          <input type="radio" name="gridMode" value="contour">
+          <span class="mode-indicator contour-indicator"></span>
+          Контур (произвольная форма)
+        </label>
+      </div>
+    </div>
 
     <div class="form-group">
       <label for="gridStep">Шаг сетки (мм):</label>
@@ -158,13 +218,27 @@
 
   <script>
     // Инициализация значений из SketchUp
-    function initializeValues(step, marginLeft, marginRight, marginTop, marginBottom) {
+    function initializeValues(step, marginLeft, marginRight, marginTop, marginBottom, gridMode) {
       document.getElementById('gridStep').value = step;
       document.getElementById('marginLeft').value = marginLeft;
       document.getElementById('marginRight').value = marginRight;
       document.getElementById('marginTop').value = marginTop;
       document.getElementById('marginBottom').value = marginBottom;
+
+      // Установка режима
+      const modeRadio = document.querySelector(`input[name="gridMode"][value="${gridMode}"]`);
+      if (modeRadio) {
+        modeRadio.checked = true;
+        updateModeVisual(gridMode);
+      }
+
       showStatus('Настройки загружены', 'info');
+    }
+
+    // Обновление визуального оформления в зависимости от режима
+    function updateModeVisual(mode) {
+      const container = document.getElementById('dialogContainer');
+      container.className = `container ${mode}-mode`;
     }
 
     // Показать статус
@@ -187,6 +261,7 @@
       const marginRight = document.getElementById('marginRight').value;
       const marginTop = document.getElementById('marginTop').value;
       const marginBottom = document.getElementById('marginBottom').value;
+      const gridMode = document.querySelector('input[name="gridMode"]:checked').value;
 
       // Проверка ввода
       if (!step || step <= 0) {
@@ -199,7 +274,7 @@
       }
 
       // Отправка в SketchUp
-      sketchup.applyGridSettings(step, marginLeft, marginRight, marginTop, marginBottom);
+      sketchup.applyGridSettings(step, marginLeft, marginRight, marginTop, marginBottom, gridMode);
       showStatus('Настройки применены', 'success');
     }
 
@@ -212,12 +287,20 @@
     document.getElementById('applyBtn').addEventListener('click', applySettings);
     document.getElementById('closeBtn').addEventListener('click', closeDialog);
 
-    // Автоматическое применение при изменении значений (опционально)
+    // Автоматическое применение при изменении значений
     document.getElementById('gridStep').addEventListener('change', applySettings);
     document.getElementById('marginLeft').addEventListener('change', applySettings);
     document.getElementById('marginRight').addEventListener('change', applySettings);
     document.getElementById('marginTop').addEventListener('change', applySettings);
     document.getElementById('marginBottom').addEventListener('change', applySettings);
+
+    // Обработка изменения режима
+    document.querySelectorAll('input[name="gridMode"]').forEach(radio => {
+      radio.addEventListener('change', function () {
+        updateModeVisual(this.value);
+        applySettings();
+      });
+    });
 
     // Инициализация при загрузке
     document.addEventListener('DOMContentLoaded', function () {

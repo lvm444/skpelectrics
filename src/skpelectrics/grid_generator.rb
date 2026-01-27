@@ -2,6 +2,7 @@
 # Генератор сетки привязки для SketchUp плагина skpelectrics
 
 require 'sketchup.rb'
+require_relative 'contour_manager'
 
 module Lvm444Dev
   module GridGenerator
@@ -16,12 +17,14 @@ module Lvm444Dev
         @margin_right = 100.0.mm  # отступ справа
         @margin_top = 100.0.mm    # отступ сверху
         @margin_bottom = 100.0.mm # отступ снизу
+        @grid_mode = :rectangle   # :rectangle или :contour
         @plane = nil
         @width = 0
         @height = 0
         @mouse_ip = Sketchup::InputPoint.new
         @state = :select_plane  # :select_plane, :drag_grid, :done
         @drawn_grid = nil
+        @contour_manager = nil  # Менеджер контура для режима контур
       end
 
       def activate
@@ -32,6 +35,7 @@ module Lvm444Dev
         saved_margin_right = model.get_attribute("skpelectrics_grid", "margin_right")
         saved_margin_top = model.get_attribute("skpelectrics_grid", "margin_top")
         saved_margin_bottom = model.get_attribute("skpelectrics_grid", "margin_bottom")
+        saved_mode = model.get_attribute("skpelectrics_grid", "mode")
 
         # Для обратной совместимости: если есть старый единый отступ, используем его для всех сторон
         saved_margin = model.get_attribute("skpelectrics_grid", "margin")
@@ -51,7 +55,27 @@ module Lvm444Dev
           @margin_bottom = saved_margin_bottom ? saved_margin_bottom : 100.0.mm
         end
 
-        Sketchup.status_text = "Выберите плоскость для сетки: кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY). Нажмите S для показа/скрытия настроек."
+        # Загружаем режим (строку "rectangle" или "contour" преобразуем в символ)
+        if saved_mode
+          @grid_mode = saved_mode.to_sym
+        else
+          @grid_mode = :rectangle
+        end
+
+        # Инициализируем менеджер контура, если режим контур
+        if @grid_mode == :contour
+          @contour_manager = ContourManager.new
+          @contour_manager.grid_size = @grid_size
+          @contour_manager.margin_left = @margin_left
+          @contour_manager.margin_right = @margin_right
+          @contour_manager.margin_top = @margin_top
+          @contour_manager.margin_bottom = @margin_bottom
+        else
+          @contour_manager = nil
+        end
+
+        mode_text = @grid_mode == :rectangle ? "прямоугольник" : "контур"
+        Sketchup.status_text = "Выберите плоскость для сетки (#{mode_text}): кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY). Нажмите S для показа/скрытия настроек."
         @points.clear
         @state = :select_plane
         @plane = nil
@@ -85,7 +109,7 @@ module Lvm444Dev
 
       def onKeyDown(key, repeat, flags, view)
         case key
-        when UI::KeyReturn
+        when 13  # Enter (Return)
           if @state == :select_plane && @points.empty?
             # Используем плоскость XY по умолчанию
             origin = Geom::Point3d.new(0, 0, 0)
@@ -99,8 +123,37 @@ module Lvm444Dev
             Sketchup.status_text = "Задайте размер сетки: кликните и растяните прямоугольник"
             view.invalidate
             return true
+          elsif @state == :select_contour && @contour_manager
+            # Завершаем контур и создаем сетку
+            grid = @contour_manager.finish_contour
+            if grid
+              @drawn_grid = grid
+              @state = :done
+              Sketchup.status_text = "Контур завершен. Сетка создана. Нажмите Esc для выхода или кликните для новой сетки."
+            else
+              @state = :contour_done
+              Sketchup.status_text = "Контур завершен. Нажмите Enter для создания сетки."
+            end
+            view.invalidate
+            return true
+          elsif @state == :contour_done && @contour_manager
+            # Создаем контурную сетку (резервный вариант)
+            grid = @contour_manager.create_grid
+            @drawn_grid = grid if grid
+            @state = :done
+            Sketchup.status_text = "Контурная сетка создана. Нажмите Esc для выхода или кликните для новой сетки."
+            view.invalidate
+            return true
           end
-        when UI::KeyEscape
+        when 8  # Backspace
+          if @state == :select_contour && @contour_manager && @contour_manager.point_count > 0
+            # Удаляем последнюю точку контура
+            @contour_manager.remove_last_point
+            Sketchup.status_text = "Точка удалена. Осталось точек контура: #{@contour_manager.point_count}. Кликайте дальше или нажмите Enter для завершения."
+            view.invalidate
+            return true
+          end
+        when 27  # Escape
           onCancel(0, view)
           return true
         when 83, 115 # Клавиша S (верхний и нижний регистр)
@@ -172,18 +225,76 @@ module Lvm444Dev
           when 3
             # Три точки определяют плоскость
             @plane = define_plane(@points[0], @points[1], @points[2])
-            @state = :drag_grid
-            Sketchup.status_text = "Задайте размер сетки: кликните и растяните прямоугольник"
+            if @grid_mode == :contour
+              # Передаем плоскость в менеджер контура
+              if @contour_manager
+                @contour_manager.plane = @plane
+              end
+              @state = :select_contour
+              Sketchup.status_text = "Режим контур: кликайте точки для определения контура. Нажмите Enter для завершения или Backspace для удаления последней точки."
+            else
+              @state = :drag_grid
+              Sketchup.status_text = "Задайте размер сетки: кликните и растяните прямоугольник"
+            end
           end
 
         when :drag_grid
           if @points.size == 3
-            # Четвертый клик - завершение создания сетки
+            # Четвертый клик - завершение создания сетки (прямоугольный режим)
             @points << @mouse_ip.position
             create_grid
             @state = :done
             Sketchup.status_text = "Сетка создана. Нажмите Esc для выхода или кликните для новой сетки."
           end
+
+        when :select_contour
+          # Используем менеджер контура
+          return true unless @contour_manager
+
+          new_point = @mouse_ip.position
+
+          # Проверяем прилипание к первой точке контура
+          if @contour_manager.should_snap_to_first_point?(new_point, view)
+            # Замыкаем контур и создаем сетку
+            grid = @contour_manager.close_contour
+            if grid
+              @drawn_grid = grid
+              @state = :done
+              Sketchup.status_text = "Контур замкнут автоматически. Сетка создана. Нажмите Esc для выхода или кликните для новой сетки."
+            else
+              @state = :contour_done
+              Sketchup.status_text = "Контур замкнут автоматически. Нажмите Enter для создания сетки."
+            end
+            view.invalidate
+            return true
+          end
+
+          # Проверяем максимальное количество точек
+          if @contour_manager.max_points_reached?
+            Sketchup.status_text = "Достигнут максимум точек контура (50). Нажмите Enter для завершения."
+            view.invalidate
+            return true
+          end
+
+          # Добавляем точку контура
+          @contour_manager.add_point(new_point)
+          Sketchup.status_text = "Точка #{@contour_manager.point_count} контура. Кликайте дальше, нажмите Enter для завершения или кликните близко к первой точке для замыкания."
+
+          # Автоматическое завершение при достижении максимума
+          if @contour_manager.point_count >= 49  # 49 + новая точка = 50
+            @contour_manager.finish_contour
+            @state = :contour_done
+            Sketchup.status_text = "Достигнут максимум точек контура (50). Контур завершен. Нажмите Enter для создания сетки."
+          end
+
+        when :contour_done
+          # Контур завершен, можно создавать сетку
+          if @contour_manager
+            grid = @contour_manager.create_grid
+            @drawn_grid = grid if grid
+          end
+          @state = :done
+          Sketchup.status_text = "Контурная сетка создана. Нажмите Esc для выхода или кликните для новой сетки."
         when :done
           # Начинаем заново
           reset_tool
@@ -201,6 +312,10 @@ module Lvm444Dev
           draw_plane_selection(view)
         when :drag_grid
           draw_grid_preview(view)
+        when :select_contour, :contour_done
+          if @contour_manager
+            @contour_manager.draw_preview(view, @mouse_ip)
+          end
         end
 
         # Рисуем мышиный указатель
@@ -253,6 +368,7 @@ module Lvm444Dev
       def point_from_local(local_point, transformation)
         local_point.transform(transformation)
       end
+
 
       def draw_plane_selection(view)
         return if @points.empty?
@@ -586,6 +702,11 @@ module Lvm444Dev
         model.commit_operation
       end
 
+      # Сеттер для режима (используется GridSettingsDialog)
+      def grid_mode=(mode)
+        @grid_mode = mode.to_sym
+      end
+
       def reset_tool
         # Загружаем сохраненные настройки
         model = Sketchup.active_model
@@ -594,6 +715,7 @@ module Lvm444Dev
         saved_margin_right = model.get_attribute("skpelectrics_grid", "margin_right")
         saved_margin_top = model.get_attribute("skpelectrics_grid", "margin_top")
         saved_margin_bottom = model.get_attribute("skpelectrics_grid", "margin_bottom")
+        saved_mode = model.get_attribute("skpelectrics_grid", "mode")
 
         # Для обратной совместимости: если есть старый единый отступ, используем его для всех сторон
         saved_margin = model.get_attribute("skpelectrics_grid", "margin")
@@ -613,13 +735,21 @@ module Lvm444Dev
           @margin_bottom = saved_margin_bottom ? saved_margin_bottom : 100.0.mm
         end
 
+        # Загружаем режим
+        if saved_mode
+          @grid_mode = saved_mode.to_sym
+        else
+          @grid_mode = :rectangle
+        end
+
+        mode_text = @grid_mode == :rectangle ? "прямоугольник" : "контур"
         @points.clear
         @state = :select_plane
         @plane = nil
         @width = 0
         @height = 0
         @drawn_grid = nil
-        Sketchup.status_text = "Выберите плоскость для сетки: кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY). Нажмите S для настроек."
+        Sketchup.status_text = "Выберите плоскость для сетки (#{mode_text}): кликните 3 точки или нажмите Enter для плоскости по умолчанию (XY). Нажмите S для настроек."
       end
 
     end # class GridTool
@@ -695,11 +825,15 @@ module Lvm444Dev
           margin_bottom = model.get_attribute("skpelectrics_grid", "margin_bottom")
           margin_bottom = margin_bottom ? margin_bottom.to_mm.to_f : 100.0
 
-          dialog.execute_script("initializeValues(#{step}, #{margin_left}, #{margin_right}, #{margin_top}, #{margin_bottom})")
+          # Загружаем режим (по умолчанию "rectangle" для обратной совместимости)
+          grid_mode = model.get_attribute("skpelectrics_grid", "mode")
+          grid_mode = grid_mode ? grid_mode : "rectangle"
+
+          dialog.execute_script("initializeValues(#{step}, #{margin_left}, #{margin_right}, #{margin_top}, #{margin_bottom}, '#{grid_mode}')")
         end
 
-        dialog.add_action_callback("applyGridSettings") do |action_context, step, margin_left, margin_right, margin_top, margin_bottom|
-          apply_settings(step.to_f.mm, margin_left.to_f.mm, margin_right.to_f.mm, margin_top.to_f.mm, margin_bottom.to_f.mm, tool)
+        dialog.add_action_callback("applyGridSettings") do |action_context, step, margin_left, margin_right, margin_top, margin_bottom, grid_mode|
+          apply_settings(step.to_f.mm, margin_left.to_f.mm, margin_right.to_f.mm, margin_top.to_f.mm, margin_bottom.to_f.mm, grid_mode, tool)
           dialog.execute_script("showStatus('Настройки применены', 'success')")
         end
 
@@ -710,7 +844,7 @@ module Lvm444Dev
         dialog
       end
 
-      def self.apply_settings(step, margin_left, margin_right, margin_top, margin_bottom, tool = nil)
+      def self.apply_settings(step, margin_left, margin_right, margin_top, margin_bottom, grid_mode, tool = nil)
         # Сохраняем настройки
         model = Sketchup.active_model
         model.set_attribute("skpelectrics_grid", "step", step)
@@ -718,6 +852,7 @@ module Lvm444Dev
         model.set_attribute("skpelectrics_grid", "margin_right", margin_right)
         model.set_attribute("skpelectrics_grid", "margin_top", margin_top)
         model.set_attribute("skpelectrics_grid", "margin_bottom", margin_bottom)
+        model.set_attribute("skpelectrics_grid", "mode", grid_mode)
 
         # Обновляем текущий инструмент, если он активен
         if tool && tool.is_a?(GridTool)
@@ -726,6 +861,12 @@ module Lvm444Dev
           tool.instance_variable_set(:@margin_right, margin_right)
           tool.instance_variable_set(:@margin_top, margin_top)
           tool.instance_variable_set(:@margin_bottom, margin_bottom)
+          # Сохраняем режим в инструменте (если он поддерживает)
+          if tool.respond_to?(:grid_mode=)
+            tool.grid_mode = grid_mode
+          elsif tool.instance_variable_defined?(:@grid_mode)
+            tool.instance_variable_set(:@grid_mode, grid_mode)
+          end
 
           # Обновляем существующую сетку, если есть
           drawn_grid = tool.instance_variable_get(:@drawn_grid)
@@ -735,7 +876,7 @@ module Lvm444Dev
 
           # Обновляем предпросмотр
           Sketchup.active_model.active_view.invalidate if Sketchup.active_model.active_view
-          Sketchup.status_text = "Настройки сетки обновлены: шаг #{step.to_mm} мм, отступы L:#{margin_left.to_mm} R:#{margin_right.to_mm} T:#{margin_top.to_mm} B:#{margin_bottom.to_mm} мм"
+          Sketchup.status_text = "Настройки сетки обновлены: шаг #{step.to_mm} мм, отступы L:#{margin_left.to_mm} R:#{margin_right.to_mm} T:#{margin_top.to_mm} B:#{margin_bottom.to_mm} мм, режим: #{grid_mode == 'rectangle' ? 'прямоугольник' : 'контур'}"
         end
       end
 
