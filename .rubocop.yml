@@ -21,7 +21,7 @@ AllCops:
   - src/*/vendor/**/* # Exclude skippy vendor folder
   SketchUp:
     SourcePath: src
-    TargetSketchUpVersion: 2014
+    TargetSketchUpVersion: 2017
     Exclude: # Exclude common folders.
     - profiling/
     - skippy/
