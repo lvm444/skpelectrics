@@ -18,6 +18,8 @@ module Lvm444Dev
           pattern = /^(?<line_number>\d+)-(?<load_type>[А-ЯA-Z\d+(),]{1,10})-(?<room>[А-яA-Za-z\d]+)\s*(?: (?<description>.+))?$/
         when "2"
           pattern = /^(?<line_number>[1-9][0-9]?)(?<load_type>[А-Яа-яA-Za-z]+)(?<room>[1-9][0-9]?)(?<description>\s.*)?$/
+        when "3"
+          pattern = /^(?<room>[1-9][0-9]?)(?<load_type>[А-Яа-яA-Za-z]+)(?<group_in_room>[1-9][0-9]?)(?:\s*--\s*(?<description>.*))?$/
         else
           UI.messagebox("Выбран некорректный номер шаблона #{pattern_number}")
           raise "parser error unknown pattern num #{pattern_number}"
@@ -27,7 +29,7 @@ module Lvm444Dev
 
         if match = group.name.match(pattern)
           elLine = ElectricLineModel.new(group)
-          elLine.line_number = match[:line_number]
+          elLine.line_number = format_line_number(match)
           elLine.type = match[:load_type]
           elLine.room = match[:room]
           elLine.description = match[:description]
@@ -35,6 +37,14 @@ module Lvm444Dev
         else
           return nil
         end
+      end
+
+      def self.format_line_number(match)
+        if match.names.include?("line_number")
+          return match[:line_number]
+        end
+
+        match[:room] + "." + match[:group_in_room].rjust(2, '0')
       end
     end
   end
