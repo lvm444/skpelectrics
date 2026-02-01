@@ -205,6 +205,10 @@
         тип кабеля <strong>ВВГнг(А)-LS 3x2.5</strong></li>
     </ul>
 
+    <h2>Формирование номера линии</h2>
+    <p>Номер линии формируется по следующему шаблону, при этом номер группы дополняется 0 слева, если он меньше 10:</p>
+    <p class="code">&lt;номер комнаты&gt;.&lt;номер группы&gt;</p>
+
     <h2>Примеры правильных данных</h2>
     <div class="example">
       <p><strong>Пример 1:</strong> <span class="code">5РОЗ1 -- 3х2.5</span></p>
@@ -214,6 +218,16 @@
         <li><strong>Номер группы:</strong> 1</li>
         <li><strong>Описание:</strong> 3х2.5</li>
         <li><strong>Сформированный номер линии:</strong> 5.01</li>
+      </ul>
+    </div>
+    <div class="example">
+      <p><strong>Пример 2:</strong> <span class="code">2ОСВ11</span></p>
+      <ul>
+        <li><strong>Номер комнаты:</strong> 2</li>
+        <li><strong>Тип нагрузки:</strong> ОСВ</li>
+        <li><strong>Номер группы:</strong> 11</li>
+        <li><strong>Описание:</strong> отсутствует</li>
+        <li><strong>Сформированный номер линии:</strong> 2.11</li>
       </ul>
     </div>
   </div>
