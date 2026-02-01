@@ -72,8 +72,22 @@
     </table>
   </div>
 
+  <div id="div_warnings">
+    <h2>Замечания</h2>
+    <table id="tbl_warnings">
+      <thead>
+        <tr>
+          <th>Описание</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Данные будут вставлены здесь -->
+      </tbody>
+    </table>
+  </div>
+
   <script>
-    function populateReport(data, totalsType, lines_summary) {
+    function populateReport(data, totalsType, lines_summary, warnings) {
       const items = JSON.parse(data);
       const $dataTableBody = $('#dataTable tbody');
 
@@ -136,6 +150,18 @@
           .append($('<td>').text(formatNumber(lines_summary.materials_summary[material])));
         $totalsMaterialsBody.append($row);
       });
+
+      const $warningsBody = $('#tbl_warnings tbody');
+      $warningsBody.empty();
+
+      warnings.forEach(warning => {
+        const $row = $('<tr>').append($('<td>').text(warning))
+        $warningsBody.append($row);
+      });
+
+      if (warnings.length == 0) {
+        $('#div_warnings').remove();
+      }
 
       // Reinitialize tablesorter only after ensuring data is populated
       setTimeout(() => {
