@@ -31,9 +31,10 @@ module Lvm444Dev
 
           lines_summary = calculate_summary(lines)
 
-          validate_line_number_collisions(lines_sorted)
+          warnings = []
+          warnings += validate_line_number_collisions(lines_sorted)
 
-          dialog.execute_script("populateReport('#{lines_sorted.to_json}',#{Lvm444Dev::SketchupUtils.get_wiring_types(lines).to_json},#{lines_summary.to_json})")
+          dialog.execute_script("populateReport('#{lines_sorted.to_json}',#{Lvm444Dev::SketchupUtils.get_wiring_types(lines).to_json},#{lines_summary.to_json},#{warnings.to_json})")
         end
 
         dialog
@@ -71,6 +72,8 @@ module Lvm444Dev
       end
 
       def self.validate_line_number_collisions(lines)
+        warnings = []
+
         line_hash = Hash.new()
         lines.each do |line|
 
@@ -78,13 +81,15 @@ module Lvm444Dev
           if line_hash[collisionkey] == nil
               line_hash[collisionkey] = line
             else
-              throw_line_collision_ex(line,line_hash[collisionkey])
+              warnings << format_line_collision_warning(line,line_hash[collisionkey])
           end
         end
+
+        warnings
       end
 
-      def self.throw_line_collision_ex(col_line1,col_line2)
-        UI.messagebox(" Колизия линия 1 #{col_line1.to_desc} линия 2 #{col_line2.to_desc}" )
+      def self.format_line_collision_warning(col_line1,col_line2)
+        "Колизия линия 1 #{col_line1.to_desc} линия 2 #{col_line2.to_desc}"
       end
 
 
