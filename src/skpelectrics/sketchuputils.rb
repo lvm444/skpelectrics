@@ -2,24 +2,16 @@ module Lvm444Dev
 
   require 'sketchup.rb'
   require_relative 'dialog_settings'
+  require_relative 'electric_line_length_calculator'
 
   module SketchupUtils
-
-    INCH_SCALE ||= 0.0254
 
     # calculation
 
     def self.calculate_length_by_entity(entity)
-      res = 0.0
-      if entity.is_a?(Sketchup::Group)
-        group = entity
-        group.entities.each do |entity|
-          res += self.calculate_length_by_entity(entity).to_f
-        end
-        return res
-      elsif entity.is_a?(Sketchup::Edge)
-        return entity.length * INCH_SCALE
-      end
+      calculator = ElectricLine::LengthCalculator.new
+      calculator.visit(entity)
+      calculator.length
     end
 
     def self.get_skp_model
