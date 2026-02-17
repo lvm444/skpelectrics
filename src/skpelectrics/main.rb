@@ -45,6 +45,11 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog
       }
 
+      menu.add_item('Генератор сетки привязки') {
+        require_relative 'grid_generator'
+        Lvm444Dev::GridGenerator.activate_grid_tool
+      }
+
       line_transformations_menu = menu.add_submenu('Преобразования')
 
       line_transformations_menu.add_item('Выделить все эл. линии') {
