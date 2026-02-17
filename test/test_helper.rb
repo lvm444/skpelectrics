@@ -82,6 +82,30 @@ module TestMocks
     end
   end
 
+  class MockGroup
+    attr_accessor :name, :entities, :attributes
+
+    def initialize(name = "Test Group")
+      @name = name
+      @entities = []
+      @attributes = {}
+    end
+
+    def add_entity(entity)
+      @entities << entity
+    end
+
+    def get_attribute(dict_name, key, default = nil)
+      dict = @attributes[dict_name] || {}
+      dict[key] || default
+    end
+
+    def set_attribute(dict_name, key, value)
+      @attributes[dict_name] ||= {}
+      @attributes[dict_name][key] = value
+    end
+  end
+
   # Helper methods for test data
   def self.create_mock_model
     MockModel.new
