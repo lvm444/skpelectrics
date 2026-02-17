@@ -28,9 +28,7 @@ module Lvm444Dev
             return
           end
 
-          data = collect_report_data()
-
-          dialog.execute_script("populateReport('#{data[:lines].to_json}',#{data[:wirings].to_json},#{data[:summary].to_json},#{data[:warnings].to_json})")
+          collect_report_data().to_json
         end
 
         dialog
@@ -134,9 +132,15 @@ module Lvm444Dev
           @dialog.bring_to_front
         end
 
+        @dialog_create_time = Time.now
         @dialog = self.create_dialog
         @dialog.add_action_callback('edit_wiring_type') { |action_context, wiring_type|
           self.edit_wiring_type(wiring_type)
+          nil
+        }
+        @dialog.add_action_callback('step') { |action_context, name|
+          duration = Time.now - @dialog_create_time
+          puts "Report: #{name} - #{duration.round(3)}s"
           nil
         }
         @dialog.show
