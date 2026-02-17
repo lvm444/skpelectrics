@@ -1,3 +1,8 @@
+require 'sketchup'
+require_relative 'settings'
+require_relative 'dialog_settings'
+require_relative 'sketchuputils'
+
 module Lvm444Dev
   module SkpElectricsDialogs
     module DialogsCreateLineReport
@@ -23,21 +28,37 @@ module Lvm444Dev
             return
           end
 
+          data = collect_report_data()
 
-
-          lines = Lvm444Dev::SketchupUtils.search_electric_lines
-
-          lines_sorted = lines.sort_by { |item| [item.room, item.type] }
-
-          lines_summary = calculate_summary(lines)
-
-          warnings = []
-          warnings += validate_line_number_collisions(lines_sorted)
-
-          dialog.execute_script("populateReport('#{lines_sorted.to_json}',#{Lvm444Dev::SketchupUtils.get_wiring_types(lines).to_json},#{lines_summary.to_json},#{warnings.to_json})")
+          dialog.execute_script("populateReport('#{data[:lines].to_json}',#{data[:wirings].to_json},#{data[:summary].to_json},#{data[:warnings].to_json})")
         end
 
         dialog
+      end
+
+      def self.collect_report_data()
+        lines = Lvm444Dev::SketchupUtils.search_electric_lines
+
+        lines_sorted = lines.sort_by { |item| [item.room, item.type] }
+        {
+          lines: collect_lines_data(lines_sorted),
+          summary: calculate_summary(lines),
+          wirings: Lvm444Dev::SketchupUtils.get_wiring_types(lines),
+          warnings: validate_line_number_collisions(lines)
+        }
+      end
+
+      def self.collect_lines_data(lines)
+        lines.map do |line|
+          {
+            line_number: line.line_number,
+            type: line.type,
+            room: line.room,
+            description: line.description,
+            length: line.length,
+            wire_type_sums: line.wire_type_sums
+          }
+        end
       end
 
       def self.calculate_summary(lines)
