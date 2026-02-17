@@ -37,6 +37,10 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog
       }
 
+      menu.add_item('Настройки запаса кабеля') {
+        Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog
+      }
+
       line_transformations_menu = menu.add_submenu('Преобразования')
 
       line_transformations_menu.add_item('Выделить все эл. линии') {
