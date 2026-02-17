@@ -5,8 +5,29 @@ module Lvm444Dev
 
 
     module ElectricLineParser
+
+      @injected_settings = nil
+
+      def self.injected_settings
+        # Lazy loading - ищем Settings при первом обращении
+        if @injected_settings.nil? && defined?(Lvm444Dev::SkpElectrics::Settings)
+          @injected_settings = Lvm444Dev::SkpElectrics::Settings
+          #puts "ElectricLineParser: Auto-injected Settings (lazy)"
+        else
+          puts "ElectricLineParser: Settings not injected"
+        end
+        @injected_settings
+      end
+
+      def self.injected_settings=(value)
+        @injected_settings = value
+      end
+
       def self.parse_group(group)
-        pattern_number = Lvm444Dev::SkpElectrics::Settings.get_line_template
+
+        settings = injected_settings
+
+        pattern_number = settings.get_line_template
 
         if pattern_number == nil
           raise "parser error unknown line pattern number"

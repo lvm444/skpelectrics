@@ -11,7 +11,8 @@ puts "=" * 50
 
 test_files.each do |test_file|
   puts "Running: #{File.basename(test_file)}"
-  require_relative test_file
+  #require test_file
+  require "./#{test_file}"
 end
 
 puts "=" * 50

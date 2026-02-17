@@ -15,6 +15,14 @@ module Lvm444Dev
 
     unless file_loaded?(__FILE__)
       reload
+
+      #inject dependencies
+      if defined?(Lvm444Dev::SkpElectrics::Settings)
+        Lvm444Dev::SketchupUtils::ElectricLineParser.injected_settings =
+          Lvm444Dev::SkpElectrics::Settings
+        puts "ElectricLineParser Settings - Injected"
+      end
+
       menu = UI.menu('Plugins').add_submenu('skpelectrics')
 
       menu.add_item('Настройки') {
