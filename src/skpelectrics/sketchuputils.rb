@@ -3,6 +3,7 @@ module Lvm444Dev
   require 'sketchup.rb'
   require_relative 'dialog_settings'
   require_relative 'electric_line_length_calculator'
+  require_relative 'electric_line_cable_ends'
 
   module SketchupUtils
 
@@ -12,6 +13,12 @@ module Lvm444Dev
       calculator = ElectricLine::LengthCalculator.new
       calculator.visit(entity)
       calculator.length
+    end
+
+    def self.calculate_cable_ends_count(entity)
+      cable_ends = ElectricLine::CableEnds.new
+      cable_ends.visit(entity)
+      cable_ends.ends.size
     end
 
     def self.get_skp_model

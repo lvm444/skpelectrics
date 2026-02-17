@@ -84,6 +84,10 @@ module Lvm444Dev
       Lvm444Dev::SketchupUtils.calculate_length_by_entity(@group)
     end
 
+    def cable_ends_count
+      Lvm444Dev::SketchupUtils.calculate_cable_ends_count(@group)
+    end
+
     def wire_type_sums
       return Lvm444Dev::TagsManager.calculate_length_by_attribute(@group,"wiring")
     end
