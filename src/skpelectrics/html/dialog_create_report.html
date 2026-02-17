@@ -87,8 +87,7 @@
   </div>
 
   <script>
-    function populateReport(data, totalsType, lines_summary, warnings) {
-      const items = JSON.parse(data);
+    function populateReport(items, totalsType, lines_summary, warnings) {
       const $dataTableBody = $('#dataTable tbody');
 
       const $tableBodyCols = $('#dataTable tr');
@@ -168,6 +167,7 @@
         $('#dataTable').tablesorter();
         $('#tbl_totals_type').tablesorter();
         $('#tbl_totals_room').tablesorter();
+        sketchup.step("full time");
       }, 0);
     }
 
@@ -208,7 +208,13 @@
     }
 
     $(document).ready(function () {
-      window.location = 'skp:dialog_ready';
+      sketchup.dialog_ready({
+        onCompleted: function (json) {
+          data = JSON.parse(json)
+          sketchup.step("collected");
+          populateReport(data.lines, data.wirings, data.summary, data.warnings);
+        }
+      })
     });
   </script>
 </body>
