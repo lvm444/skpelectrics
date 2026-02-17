@@ -12,9 +12,6 @@ module Lvm444Dev
         # Lazy loading - ищем Settings при первом обращении
         if @injected_settings.nil? && defined?(Lvm444Dev::SkpElectrics::Settings)
           @injected_settings = Lvm444Dev::SkpElectrics::Settings
-          #puts "ElectricLineParser: Auto-injected Settings (lazy)"
-        else
-          puts "ElectricLineParser: Settings not injected"
         end
         @injected_settings
       end
