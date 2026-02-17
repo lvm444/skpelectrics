@@ -121,6 +121,7 @@ module Lvm444Dev
       types
     end
 
+    # @return [Array<Lvm444Dev::ElectricLineModel>] массив электрических линий
     def self.search_electric_lines
       model = Sketchup.active_model
       root_groups = model.entities.grep(Sketchup::Group)
