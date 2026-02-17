@@ -8,17 +8,20 @@ module Lvm444Dev
     end
 
     def test_room_summary
-      assert_in_delta(20.502, get_room_summary('Кухня'), delta = 0.0001)
+      assert_in_delta(24.702, get_room_summary('Кухня'), delta = 0.0001)
     end
 
     def test_line_type_summary
-      assert_in_delta(4.784, get_line_type_summary('ОСВ'), delta = 0.0001)
-      assert_in_delta(15.718, get_line_type_summary('РОЗ'), delta = 0.0001)
+      assert_in_delta(6.584, get_line_type_summary('ОСВ'), delta = 0.0001)
+      # запас 6 * 0.3 = 1.8
+      assert_in_delta(18.118, get_line_type_summary('РОЗ'), delta = 0.0001)
+      # запас 6 * 0.3 = 1.8
+      # запас 2 * 0.3 = 0.6
     end
 
     def test_material_summary
-      assert_in_delta(4.784, get_material_summary('ВВГ 3*1.5'), delta = 0.0001)
-      assert_in_delta(15.718, get_material_summary('ВВГ 3*2.5'), delta = 0.0001)
+      assert_in_delta(6.584, get_material_summary('ВВГ 3*1.5'), delta = 0.0001)
+      assert_in_delta(18.118, get_material_summary('ВВГ 3*2.5'), delta = 0.0001)
     end
 
     def test_wirings
@@ -32,7 +35,8 @@ module Lvm444Dev
       assert_equal('РОЗ', line[:type])
       assert_equal('Кухня', line[:room])
       assert_nil(line[:description])
-      assert_in_delta(10.272, line[:length], delta = 0.0001)
+      assert_in_delta(12.072, line[:length], delta = 0.0001)
+      # запас 6 * 0.3 = 1.8
 
       assert_in_delta(5.582, line[:wire_type_sums]['Гофра'], delta = 0.0001)
       assert_in_delta(4.690, line[:wire_type_sums]['Штроба'], delta = 0.0001)
@@ -42,7 +46,8 @@ module Lvm444Dev
       line = get_line_by_number('02')
       assert_equal('РОЗ', line[:type])
       assert_equal('Плита (no wirings)', line[:description])
-      assert_in_delta(5.446, line[:length], delta = 0.0001)
+      assert_in_delta(6.046, line[:length], delta = 0.0001)
+      # запас 2 * 0.3 = 0.6
 
       assert_equal({}, line[:wire_type_sums])
     end
@@ -51,7 +56,8 @@ module Lvm444Dev
       line = get_line_by_number('03')
       assert_equal('ОСВ', line[:type])
       assert_nil(line[:description])
-      assert_in_delta(4.784, line[:length], delta = 0.0001)
+      assert_in_delta(6.584, line[:length], delta = 0.0001)
+      # запас 6 * 0.3 = 1.8
 
       assert_in_delta(2.914, line[:wire_type_sums]['Гофра'], delta = 0.0001)
       assert_in_delta(1.870, line[:wire_type_sums]['Штроба'], delta = 0.0001)

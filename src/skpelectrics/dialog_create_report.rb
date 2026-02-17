@@ -2,6 +2,7 @@ require 'sketchup'
 require_relative 'settings'
 require_relative 'dialog_settings'
 require_relative 'sketchuputils'
+require_relative 'electric_line_reserve_calculator'
 
 module Lvm444Dev
   module SkpElectricsDialogs
@@ -47,6 +48,8 @@ module Lvm444Dev
       end
 
       def self.collect_lines_data(lines)
+        reserve_calculator = Lvm444Dev::ElectricLine::ReserveCalculator.new()
+
         lines
           .sort_by { |item| [item.room, item.type] }
           .map do |line|
@@ -55,7 +58,7 @@ module Lvm444Dev
               type: line.type,
               room: line.room,
               description: line.description,
-              length: line.length,
+              length: reserve_calculator.length_with_reserve(line),
               wire_type_sums: line.wire_type_sums
             }
           end
