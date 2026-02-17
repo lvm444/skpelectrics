@@ -38,27 +38,29 @@ module Lvm444Dev
 
       def self.collect_report_data()
         lines = Lvm444Dev::SketchupUtils.search_electric_lines
+        lines_data = collect_lines_data(lines)
 
-        lines_sorted = lines.sort_by { |item| [item.room, item.type] }
         {
-          lines: collect_lines_data(lines_sorted),
-          summary: calculate_summary(lines),
-          wirings: Lvm444Dev::SketchupUtils.get_wiring_types(lines),
+          lines: lines_data,
+          summary: calculate_summary(lines_data),
+          wirings: get_wiring_types(lines_data),
           warnings: validate_line_number_collisions(lines)
         }
       end
 
       def self.collect_lines_data(lines)
-        lines.map do |line|
-          {
-            line_number: line.line_number,
-            type: line.type,
-            room: line.room,
-            description: line.description,
-            length: line.length,
-            wire_type_sums: line.wire_type_sums
-          }
-        end
+        lines
+          .sort_by { |item| [item.room, item.type] }
+          .map do |line|
+            {
+              line_number: line.line_number,
+              type: line.type,
+              room: line.room,
+              description: line.description,
+              length: line.length,
+              wire_type_sums: line.wire_type_sums
+            }
+          end
       end
 
       def self.calculate_summary(lines)
@@ -66,22 +68,25 @@ module Lvm444Dev
         model = Sketchup.active_model
         dict = Lvm444Dev::ElectricalMaterialsDictionary.new(model)
 
-        lines_type_summary = Hash.new()
-        lines_room_summary = Hash.new()
-        materials_summary = Hash.new()
+        lines_type_summary = Hash.new(0.0)
+        lines_room_summary = Hash.new(0.0)
+        materials_summary = Hash.new(0.0)
 
         lines.each do |line|
-          lines_type_summary[line.type] =  lines_type_summary.fetch(line.type,0).to_f + line.length
-          lines_room_summary[line.room] =  lines_room_summary.fetch(line.room,0).to_f + line.length
+          line_length = line[:length]
+          line_type = line[:type]
 
-          materials_hash = dict.get_materials_by_type(line.type)
+          lines_type_summary[line_type] += line_length
+          lines_room_summary[line[:room]] += line_length
+
+          materials_hash = dict.get_materials_by_type(line_type)
           if (materials_hash != nil)
             materials_hash.each do |material_id,material_desc|
-              materials_summary[material_desc] =  materials_summary.fetch(material_desc,0).to_f + line.length
+              materials_summary[material_desc] += line_length
             end
           else
-            unknown_material = "Не определено - #{line.type}"
-            materials_summary[unknown_material] =  materials_summary.fetch(unknown_material,0).to_f + line.length
+            unknown_material = "Не определено - #{line_type}"
+            materials_summary[unknown_material] += line_length
           end
         end
 
@@ -90,6 +95,16 @@ module Lvm444Dev
           :lines_room_summary => lines_room_summary,
           :materials_summary => materials_summary
         }
+      end
+
+      def self.get_wiring_types(lines)
+        wtypes = Hash.new(0.0)
+        lines.each do |line|
+          line[:wire_type_sums].each do |wtype, len|
+            wtypes[wtype] += len
+          end
+        end
+        wtypes
       end
 
       def self.validate_line_number_collisions(lines)
