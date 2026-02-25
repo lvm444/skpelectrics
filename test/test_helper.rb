@@ -18,7 +18,7 @@ module Kernel
   alias_method :original_require, :require
 
   def require(name)
-    if name == 'sketchup.rb' || name == 'extensions.rb'
+    if name == 'sketchup.rb' || name == 'extensions.rb' || name == 'sketchup' || name == 'extensions'
       # Return true to indicate the modules are already loaded
       true
     else

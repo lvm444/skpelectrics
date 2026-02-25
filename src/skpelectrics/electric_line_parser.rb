@@ -75,21 +75,6 @@ module Lvm444Dev
       @group = group
     end
 
-    def as_json(options={})
-        {
-          line_number: @line_number,
-          type: @type,
-          room: @room,
-          description: @description,
-          length: length,
-          wire_type_sums:wire_type_sums
-        }
-    end
-
-    def to_json(*options)
-        as_json(*options).to_json(*options)
-    end
-
     def to_desc
       return "#{@group.name}"
     end
@@ -100,6 +85,10 @@ module Lvm444Dev
 
     def length
       Lvm444Dev::SketchupUtils.calculate_length_by_entity(@group)
+    end
+
+    def cable_ends_count
+      Lvm444Dev::SketchupUtils.calculate_cable_ends_count(@group)
     end
 
     def wire_type_sums

@@ -28,6 +28,17 @@ module Lvm444Dev
         #init_if_not_define("line_template_setup",1)
       end
 
+      # запас кабеля
+      def self.get_cable_reserve_length
+        return get_setting_by_name("cable_reserve_length")
+      end
+
+      def self.set_cable_reserve_length(length)
+        value = length.to_i
+        value = nil if value == 0
+        set_setting_by_name("cable_reserve_length", value)
+      end
+
       def self.init_if_not_define(setting_name,setting_value)
         value = get_setting_by_name(setting_name)
         if value == nil
