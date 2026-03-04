@@ -83,7 +83,7 @@ module Lvm444Dev
 
         lines_type_summary.merge(wirings).each do |type, length|
           materials_hash = dict.get_materials_by_type(type)
-          if (materials_hash != nil)
+          if (materials_hash != nil && !materials_hash.empty?)
             materials_hash.each do |material_id,material_desc|
               materials_summary[material_desc] += length
             end
