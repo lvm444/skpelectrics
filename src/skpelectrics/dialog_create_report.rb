@@ -38,11 +38,12 @@ module Lvm444Dev
       def self.collect_report_data()
         lines = Lvm444Dev::SketchupUtils.search_electric_lines
         lines_data = collect_lines_data(lines)
+        wirings = get_wiring_types(lines_data)
 
         {
           lines: lines_data,
-          summary: calculate_summary(lines_data),
-          wirings: get_wiring_types(lines_data),
+          summary: calculate_summary(lines_data, wirings),
+          wirings: wirings,
           warnings: validate_line_number_collisions(lines)
         }
       end
@@ -64,7 +65,7 @@ module Lvm444Dev
           end
       end
 
-      def self.calculate_summary(lines)
+      def self.calculate_summary(lines, wirings)
 
         model = Sketchup.active_model
         dict = Lvm444Dev::ElectricalMaterialsDictionary.new(model)
@@ -75,19 +76,20 @@ module Lvm444Dev
 
         lines.each do |line|
           line_length = line[:length]
-          line_type = line[:type]
 
-          lines_type_summary[line_type] += line_length
+          lines_type_summary[line[:type]] += line_length
           lines_room_summary[line[:room]] += line_length
+        end
 
-          materials_hash = dict.get_materials_by_type(line_type)
+        lines_type_summary.merge(wirings).each do |type, length|
+          materials_hash = dict.get_materials_by_type(type)
           if (materials_hash != nil)
             materials_hash.each do |material_id,material_desc|
-              materials_summary[material_desc] += line_length
+              materials_summary[material_desc] += length
             end
           else
-            unknown_material = "Не определено - #{line_type}"
-            materials_summary[unknown_material] += line_length
+            unknown_material = "Не определено - #{type}"
+            materials_summary[unknown_material] += length
           end
         end
 
