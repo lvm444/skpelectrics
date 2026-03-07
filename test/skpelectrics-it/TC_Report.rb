@@ -20,13 +20,19 @@ module Lvm444Dev
     end
 
     def test_material_summary
+      materials = @data[:summary][:materials_summary].keys.sort
+      assert_equal(['ВВГ 3*1.5', 'ВВГ 3*2.5', 'Гофра 20 мм', 'Не определено - Штроба'], materials)
+
       assert_in_delta(6.584, get_material_summary('ВВГ 3*1.5'), delta = 0.0001)
       assert_in_delta(18.118, get_material_summary('ВВГ 3*2.5'), delta = 0.0001)
+
+      assert_in_delta(8.496, get_material_summary('Гофра 20 мм'), delta = 0.0001)
+      assert_in_delta(6.560, get_material_summary('Не определено - Штроба'), delta = 0.0001)
     end
 
     def test_wirings
       wirings = @data[:wirings].keys.sort
-      assert_equal(["Гофра", "Штроба"], wirings)
+      assert_equal(['Гофра', 'Штроба'], wirings)
     end
 
     def test_line_01

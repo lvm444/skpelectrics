@@ -116,21 +116,21 @@
       </button>
 
       <button type="button" onclick="showAddLineTypeForm()" class="secondary">
-        Добавить новый тип линии
+        Добавить новый тип линии/способ прокладки
       </button>
 
       <div id="add-line-form" style="display:none; margin-top:10px;">
-        <input type="text" id="new-line-type" placeholder="Введите новый тип линии">
+        <input type="text" id="new-line-type" placeholder="Введите новый тип линии/способ прокладки кабеля">
         <button type="button" onclick="addLineType()">Добавить</button>
         <button type="button" onclick="hideAddLineTypeForm()" class="danger">Отмена</button>
       </div>
     </div>
 
-    <h2>Список типов линий</h2>
+    <h2>Список типов линий/способов прокладки кабеля</h2>
     <table class="line-types-table">
       <thead>
         <tr>
-          <th>Тип линии</th>
+          <th>Тип</th>
           <th>Количество материалов</th>
           <th>Действия</th>
         </tr>
@@ -139,7 +139,7 @@
     </table>
 
     <div id="materials-editor" style="display:none;">
-      <h2>Материалы для линии: <span id="current-line-type"></span></h2>
+      <h2>Материалы для: <span id="current-line-type"></span></h2>
 
       <table id="materials-table">
         <thead>
@@ -275,7 +275,7 @@
 
     // Удаление типа линии
     function removeLineType(lineType) {
-      if (confirm(`Удалить тип линии "${lineType}" и все связанные материалы?`)) {
+      if (confirm(`Удалить тип "${lineType}" и все связанные материалы?`)) {
         delete materialsDictionary[lineType];
 
         if (currentLineType === lineType) {
