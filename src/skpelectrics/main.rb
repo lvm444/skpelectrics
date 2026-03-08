@@ -23,6 +23,26 @@ module Lvm444Dev
         puts "ElectricLineParser Settings - Injected"
       end
 
+      toolbar = UI::Toolbar.new('Электрика SKP')
+      command = UI::Command.new('Сформировать кабельный журнал') {
+        Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog
+      }
+      command.tooltip = 'Кабельный журнал'
+      command.status_bar_text = 'Сформировать кабельный журнал'
+      command.large_icon = 'images/report.png'
+      command.small_icon = 'images/report_small.png'
+      toolbar.add_item(command)
+
+      command = UI::Command.new('Настройки запаса кабеля') {
+        Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog
+      }
+      command.tooltip = 'Настройки запаса кабеля'
+      command.status_bar_text = 'Добавлять запас кабеля в розетках, коробках, выключателях и т.д.'
+      command.large_icon = 'images/reserves.png'
+      command.small_icon = 'images/reserves_small.png'
+      toolbar.add_item(command)
+      toolbar.restore
+
       menu = UI.menu('Plugins').add_submenu('skpelectrics')
 
       menu.add_item('Настройки') {
