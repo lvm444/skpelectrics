@@ -13,6 +13,12 @@ module Lvm444Dev
       end
     end
 
+    def self.create_command(menutext, cmd)
+      command = UI::Command.new(menutext, &cmd)
+      yield(command) if block_given?
+      command
+    end
+
     unless file_loaded?(__FILE__)
       reload
 
@@ -23,24 +29,26 @@ module Lvm444Dev
         puts "ElectricLineParser Settings - Injected"
       end
 
-      toolbar = UI::Toolbar.new('Электрика SKP')
-      command = UI::Command.new('Сформировать кабельный журнал') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog
-      }
-      command.tooltip = 'Кабельный журнал'
-      command.status_bar_text = 'Сформировать кабельный журнал'
-      command.large_icon = 'images/report.png'
-      command.small_icon = 'images/report_small.png'
-      toolbar.add_item(command)
+      commands = {}
+      commands[:report] = create_command('Сформировать кабельный журнал',
+        proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog }) { |command|
+          command.tooltip = 'Кабельный журнал'
+          command.status_bar_text = 'Сформировать кабельный журнал'
+          command.large_icon = 'images/report.png'
+          command.small_icon = 'images/report_small.png'
+        }
 
-      command = UI::Command.new('Настройки запаса кабеля') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog
-      }
-      command.tooltip = 'Настройки запаса кабеля'
-      command.status_bar_text = 'Добавлять запас кабеля в розетках, коробках, выключателях и т.д.'
-      command.large_icon = 'images/reserves.png'
-      command.small_icon = 'images/reserves_small.png'
-      toolbar.add_item(command)
+      commands[:reserves] = create_command('Настройки запаса кабеля',
+        proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog }) { |command|
+          command.tooltip = 'Настройки запаса кабеля'
+          command.status_bar_text = 'Добавлять запас кабеля в розетках, коробках, выключателях и т.д.'
+          command.large_icon = 'images/reserves.png'
+          command.small_icon = 'images/reserves_small.png'
+        }
+
+      toolbar = UI::Toolbar.new('Электрика SKP')
+      toolbar.add_item(commands[:report])
+      toolbar.add_item(commands[:reserves])
       toolbar.restore
 
       menu = UI.menu('Plugins').add_submenu('skpelectrics')
@@ -53,9 +61,7 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogsCreateLine.show_dialog
       }
 
-      menu.add_item('Сформировать кабельный журнал') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog
-      }
+      menu.add_item(commands[:report])
 
       menu.add_item('Указать способ прокладки кабеля') {
         Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog
@@ -65,9 +71,7 @@ module Lvm444Dev
         Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog
       }
 
-      menu.add_item('Настройки запаса кабеля') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog
-      }
+      menu.add_item(commands[:reserves])
 
       line_transformations_menu = menu.add_submenu('Преобразования')
 
