@@ -13,6 +13,53 @@ module Lvm444Dev
       end
     end
 
+    def self.create_command(menutext, cmd)
+      command = UI::Command.new(menutext, &cmd)
+      yield(command) if block_given?
+      command
+    end
+
+    def self.create_commands()
+      commands = {}
+
+      commands[:report] = create_command('Сформировать кабельный журнал',
+        proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog }) { |command|
+          command.tooltip = 'Кабельный журнал'
+          command.status_bar_text = 'Сформировать кабельный журнал'
+          command.large_icon = 'images/report.png'
+          command.small_icon = 'images/report_small.png'
+        }
+
+      commands[:reserve_settings] = create_command('Настройки запаса кабеля',
+        proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog }) { |command|
+          command.tooltip = 'Настройки запаса кабеля'
+          command.status_bar_text = 'Добавлять запас кабеля в розетках, коробках, выключателях и т.д.'
+          command.large_icon = 'images/reserves.png'
+          command.small_icon = 'images/reserves_small.png'
+        }
+
+      commands[:settings] = create_command('Настройки',
+          proc { Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog })
+      commands[:create_line] = create_command('Создать линию',
+          proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateLine.show_dialog })
+      commands[:create_wiring] = create_command('Указать способ прокладки кабеля',
+          proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog })
+      commands[:material_settings] = create_command('Отредактировать справочник материалов',
+          proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog })
+
+      commands[:lines_select] = create_command('Выделить все эл. линии',
+          proc { Lvm444Dev::SelectionManager.select_lines })
+      commands[:lines_ungroup_wirings] = create_command('Разгруппировать группы типа прокладки',
+          proc { Lvm444Dev::LineTransformationManager.ungroup_lines })
+
+      commands[:tags_redefine] = create_command('Обновить метки',
+          proc { Lvm444Dev::TagsManager.redefine_tags })
+      commands[:tags_settings] = create_command('Настройки меток',
+          proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditTags.show_dialog })
+
+      commands
+    end
+
     unless file_loaded?(__FILE__)
       reload
 
@@ -23,54 +70,29 @@ module Lvm444Dev
         puts "ElectricLineParser Settings - Injected"
       end
 
+      commands = create_commands()
+
+      toolbar = UI::Toolbar.new('Электрика SKP')
+      toolbar.add_item(commands[:report])
+      toolbar.add_item(commands[:reserve_settings])
+      toolbar.restore
+
       menu = UI.menu('Plugins').add_submenu('skpelectrics')
 
-      menu.add_item('Настройки') {
-        Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog
-      }
-
-      menu.add_item('Создать линию') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsCreateLine.show_dialog
-      }
-
-      menu.add_item('Сформировать кабельный журнал') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsCreateLineReport.show_dialog
-      }
-
-      menu.add_item('Указать способ прокладки кабеля') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog
-      }
-
-      menu.add_item('Отредактировать справочник материалов') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog
-      }
-
-      menu.add_item('Настройки запаса кабеля') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog
-      }
+      menu.add_item(commands[:settings])
+      menu.add_item(commands[:create_line])
+      menu.add_item(commands[:report])
+      menu.add_item(commands[:create_wiring])
+      menu.add_item(commands[:material_settings])
+      menu.add_item(commands[:reserve_settings])
 
       line_transformations_menu = menu.add_submenu('Преобразования')
+      line_transformations_menu.add_item(commands[:lines_select])
+      line_transformations_menu.add_item(commands[:lines_ungroup_wirings])
 
-      line_transformations_menu.add_item('Выделить все эл. линии') {
-        Lvm444Dev::SelectionManager.select_lines
-      }
-
-      line_transformations_menu.add_item('Разгруппировать группы типа прокладки') {
-        Lvm444Dev::LineTransformationManager.ungroup_lines
-      }
-
-      # раскомментировать после доработки меток
       tags_menu = menu.add_submenu('Метки')
-
-      tags_menu.add_item('Обновить метки') {
-        Lvm444Dev::TagsManager.redefine_tags
-      }
-
-	    tags_menu.add_item('Настройки тэгов') {
-        Lvm444Dev::SkpElectricsDialogs::DialogsEditTags.show_dialog
-      }
-
-
+      tags_menu.add_item(commands[:tags_redefine])
+      tags_menu.add_item(commands[:tags_settings])
 
       file_loaded(__FILE__)
     end
