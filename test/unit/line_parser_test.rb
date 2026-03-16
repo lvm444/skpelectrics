@@ -83,7 +83,7 @@ module Lvm444Dev
       electric_line = Lvm444Dev::SketchupUtils::ElectricLineParser.parse_group(group)
 
       # 6. Assertions (проверки)
-      assert electric_line, "Должен вернуть ElectricLineModel объект для pattern 3"
+      assert electric_line, "Должен вернуть ElectricLineModel объект для pattern 4"
       assert_instance_of Lvm444Dev::ElectricLineModel, electric_line
 
       # Проверяем поля согласно pattern 3: "101РОЗ01 -- Тестовая линия pattern 3"
@@ -99,6 +99,43 @@ module Lvm444Dev
       assert_equal group_name, electric_line.to_desc, "Описание группы должно совпадать"
 
       puts "Тест pattern 3 успешно пройден!"
+    end
+
+    def test_parse_line_pattern_4
+      # 1. Создаем mock settings для pattern 3
+      test_settings = Object.new
+      def test_settings.get_line_template
+        puts "используется МОК для pattern 4"
+        '4'
+      end
+
+      # 2. Инжектируем mock
+      Lvm444Dev::SketchupUtils::ElectricLineParser.injected_settings = test_settings
+
+      # 3. Создаем тестовую группу с pattern 3
+      group_name = "1.10-ОСВ-Прекрасная летняя кухня-Освещение кухни справа"
+      group = TestMocks::MockGroup.new(group_name)
+      puts "Тестовая группа (pattern 4): #{group.inspect}"
+
+      # 4. Парсим группу
+      electric_line = Lvm444Dev::SketchupUtils::ElectricLineParser.parse_group(group)
+
+      # 6. Assertions (проверки)
+      assert electric_line, "Должен вернуть ElectricLineModel объект для pattern 4"
+      assert_instance_of Lvm444Dev::ElectricLineModel, electric_line
+
+      # Проверяем поля согласно pattern 4: "1.10-ОСВ-Прекрасная летняя кухня-Освещение кухни справа"
+      assert_equal "1.10", electric_line.line_number, "Номер линии должен быть '1'"
+      assert_equal "ОСВ", electric_line.type, "Тип должен быть 'ОСВ'"
+      assert_equal "Прекрасная летняя кухня", electric_line.room, "Комната должна быть 'Прекрасная летняя кухня'"
+      assert_equal "Освещение кухни справа", electric_line.description,
+                  "Описание должно быть 'Освещение кухни справа'"
+
+      # Проверяем группу
+      assert_equal group, electric_line.get_group, "Группа должна совпадать"
+      assert_equal group_name, electric_line.to_desc, "Описание группы должно совпадать"
+
+      puts "Тест pattern 4 успешно пройден!"
     end
   end
 end
