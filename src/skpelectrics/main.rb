@@ -31,11 +31,11 @@ module Lvm444Dev
         }
 
       commands[:reserve_settings] = create_command('Настройки запаса кабеля',
-        proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog }) { |command|
-          command.tooltip = 'Настройки запаса кабеля'
-          command.status_bar_text = 'Добавлять запас кабеля в розетках, коробках, выключателях и т.д.'
-          command.large_icon = 'images/reserves.png'
-          command.small_icon = 'images/reserves_small.png'
+        proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateLine.show_dialog }) { |command|
+          command.tooltip = 'Формирование новой линии'
+          command.status_bar_text = 'Сформировать новую электро линию из выделенного'
+          command.large_icon = 'images/new_line.png'
+          command.small_icon = 'images/new_line_small.png'
         }
 
       commands[:settings] = create_command('Настройки',
