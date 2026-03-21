@@ -16,7 +16,7 @@ module Lvm444Dev
     class Tool
       def activate
         @mouse_ip = Sketchup::InputPoint.new
-        @target_height = 3000.mm
+        @target_height = Lvm444Dev::SkpElectrics::Settings.get_lineupdown_target_height || 3000.mm
         update_ui
       end
 
@@ -56,6 +56,7 @@ module Lvm444Dev
       def onUserText(text, view)
         begin
           @target_height = text.to_l
+          Lvm444Dev::SkpElectrics::Settings.set_lineupdown_target_height(@target_height)
           update_ui
         rescue ArgumentError
           UI.messagebox('Введена недопустимая высота')

@@ -39,6 +39,15 @@ module Lvm444Dev
         set_setting_by_name("cable_reserve_length", value)
       end
 
+      # высота потолков
+      def self.get_lineupdown_target_height
+        return get_setting_by_name("lineupdown_target_height")
+      end
+
+      def self.set_lineupdown_target_height(height)
+        set_setting_by_name("lineupdown_target_height", height)
+      end
+
       def self.init_if_not_define(setting_name,setting_value)
         value = get_setting_by_name(setting_name)
         if value == nil
