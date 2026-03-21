@@ -30,7 +30,7 @@ module Lvm444Dev
           command.small_icon = 'images/report_small.png'
         }
 
-      commands[:reserve_settings] = create_command('Настройки запаса кабеля',
+      commands[:create_line] = create_command('Создать линию',
         proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateLine.show_dialog }) { |command|
           command.tooltip = 'Формирование новой линии'
           command.status_bar_text = 'Сформировать новую электро линию из выделенного'
@@ -48,12 +48,12 @@ module Lvm444Dev
 
       commands[:settings] = create_command('Настройки',
           proc { Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog })
-      commands[:create_line] = create_command('Создать линию',
-          proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateLine.show_dialog })
       commands[:create_wiring] = create_command('Указать способ прокладки кабеля',
           proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog })
       commands[:material_settings] = create_command('Отредактировать справочник материалов',
           proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog })
+      commands[:reserve_settings] = create_command('Настройки запаса кабеля',
+          proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog })
 
       commands[:lines_select] = create_command('Выделить все эл. линии',
           proc { Lvm444Dev::SelectionManager.select_lines })
@@ -82,14 +82,15 @@ module Lvm444Dev
 
       toolbar = UI::Toolbar.new('Электрика SKP')
       toolbar.add_item(commands[:report])
+      toolbar.add_item(commands[:create_line])
       toolbar.add_item(commands[:lineupdown_tool])
-      toolbar.add_item(commands[:reserve_settings])
       toolbar.restore
 
       menu = UI.menu('Plugins').add_submenu('skpelectrics')
 
       menu.add_item(commands[:settings])
       menu.add_item(commands[:create_line])
+      menu.add_item(commands[:lineupdown_tool])
       menu.add_item(commands[:report])
       menu.add_item(commands[:create_wiring])
       menu.add_item(commands[:material_settings])
