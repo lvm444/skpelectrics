@@ -2,7 +2,6 @@ require 'sketchup'
 
 module Lvm444Dev
   module LineupdownTool
-    DEFAULT_TARGET_HEIGHT = 3000.mm
      # Here we have hard coded a special ID for the pencil cursor in SketchUp.
     CURSOR_PENCIL = 632
 
@@ -17,6 +16,8 @@ module Lvm444Dev
     class Tool
       def activate
         @mouse_ip = Sketchup::InputPoint.new
+        @target_height = 3000.mm
+        update_ui
       end
 
       def deactivate(view)
@@ -28,10 +29,12 @@ module Lvm444Dev
         return unless @mouse_ip.valid?
 
         point = @mouse_ip.position
-        end_point = Geom::Point3d.new(point.x, point.y, DEFAULT_TARGET_HEIGHT)
+        end_point = Geom::Point3d.new(point.x, point.y, @target_height)
 
         entities = Sketchup.active_model.active_entities
         entities.add_line(point, end_point)
+
+        update_ui
         view.invalidate
       end
 
@@ -45,7 +48,22 @@ module Lvm444Dev
         @mouse_ip.draw(view) if @mouse_ip.display?
       end
 
+      def enableVCB?
+        true
+      end
+
+      # @param text [String]
+      def onUserText(text, view)
+        begin
+          @target_height = text.to_l
+          update_ui
+        rescue ArgumentError
+          UI.messagebox('Введена недопустимая высота')
+        end
+      end
+
       def resume(view)
+        update_ui
         view.invalidate
       end
 
@@ -55,6 +73,14 @@ module Lvm444Dev
 
       def onSetCursor
         UI.set_cursor(CURSOR_PENCIL)
+      end
+
+      private
+
+      def update_ui
+        Sketchup.vcb_label = 'Высота потолков (0 - рисовать до пола)'
+        Sketchup.vcb_value = @target_height.to_s
+        Sketchup.status_text = 'Кликните для выбора начальной точки'
       end
     end
 
