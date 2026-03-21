@@ -38,6 +38,14 @@ module Lvm444Dev
           command.small_icon = 'images/new_line_small.png'
         }
 
+      commands[:lineupdown_tool] = create_command('Нарисовать линию до потолка/пола',
+        proc { Lvm444Dev::LineupdownTool.activate }) { |command|
+          command.tooltip = 'Линия до потолка/пола'
+          command.status_bar_text = 'Нарисовать линию от розетки (выключателя) до потолка/пола'
+          command.large_icon = 'images/lineupdown.png'
+          command.small_icon = 'images/lineupdown_small.png'
+        }
+
       commands[:settings] = create_command('Настройки',
           proc { Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog })
       commands[:create_line] = create_command('Создать линию',
@@ -74,6 +82,7 @@ module Lvm444Dev
 
       toolbar = UI::Toolbar.new('Электрика SKP')
       toolbar.add_item(commands[:report])
+      toolbar.add_item(commands[:lineupdown_tool])
       toolbar.add_item(commands[:reserve_settings])
       toolbar.restore
 
