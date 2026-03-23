@@ -46,7 +46,7 @@ module Lvm444Dev
           command.small_icon = 'images/lineupdown_small.png'
         }
 
-      commands[:lineupdown_tool] = create_command('Указать способ прокладки линии',
+      commands[:wire_type_tool] = create_command('Указать способ прокладки линии',
         proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog }) { |command|
           command.tooltip = 'Указать способ прокладки линии'
           command.status_bar_text = 'Указать способ прокладки линии'
