@@ -46,7 +46,7 @@ module Lvm444Dev
           command.small_icon = 'images/lineupdown_small.png'
         }
 
-      commands[:wire_type_tool] = create_command('Указать способ прокладки линии',
+      commands[:create_wiring] = create_command('Указать способ прокладки линии',
         proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog }) { |command|
           command.tooltip = 'Указать способ прокладки линии'
           command.status_bar_text = 'Указать способ прокладки линии'
@@ -56,8 +56,6 @@ module Lvm444Dev
 
       commands[:settings] = create_command('Настройки',
           proc { Lvm444Dev::SkpElectricsDialogs::DialogSetupSettings.show_dialog })
-      commands[:create_wiring] = create_command('Указать способ прокладки кабеля',
-          proc { Lvm444Dev::SkpElectricsDialogs::DialogsCreateWiring.show_dialog })
       commands[:material_settings] = create_command('Отредактировать справочник материалов',
           proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditMaterial.show_dialog })
       commands[:reserve_settings] = create_command('Настройки запаса кабеля',
@@ -92,6 +90,7 @@ module Lvm444Dev
       toolbar.add_item(commands[:report])
       toolbar.add_item(commands[:create_line])
       toolbar.add_item(commands[:lineupdown_tool])
+      toolbar.add_item(commands[:create_wiring])
       toolbar.restore
 
       menu = UI.menu('Plugins').add_submenu('skpelectrics')
