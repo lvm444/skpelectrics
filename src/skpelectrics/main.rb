@@ -61,6 +61,12 @@ module Lvm444Dev
       commands[:reserve_settings] = create_command('Настройки запаса кабеля',
           proc { Lvm444Dev::SkpElectricsDialogs::DialogsEditReserves.show_dialog })
 
+      commands[:guide_grid] = create_command('Сформировать сетку направляющих',
+          proc { Lvm444Dev::GuideGridGenerator.show_dialog }) { |command|
+            command.tooltip = 'Сетка направляющих'
+            command.status_bar_text = 'Создать сетку из направляющих линий'
+          }
+
       commands[:lines_select] = create_command('Выделить все эл. линии',
           proc { Lvm444Dev::SelectionManager.select_lines })
       commands[:lines_ungroup_wirings] = create_command('Разгруппировать группы типа прокладки',
@@ -102,6 +108,7 @@ module Lvm444Dev
       menu.add_item(commands[:create_wiring])
       menu.add_item(commands[:material_settings])
       menu.add_item(commands[:reserve_settings])
+      menu.add_item(commands[:guide_grid])
 
       line_transformations_menu = menu.add_submenu('Преобразования')
       line_transformations_menu.add_item(commands[:lines_select])
