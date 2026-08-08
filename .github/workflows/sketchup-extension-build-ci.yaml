@@ -25,7 +25,6 @@ jobs:
 
     - name: Install dependencies
       run: |
-        gem install minitest-reporters -v '~> 1.5'
         gem install simplecov -v '~> 0.22.0'
 
     - name: Run unit tests
