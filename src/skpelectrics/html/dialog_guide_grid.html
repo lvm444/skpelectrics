@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сетка направляющих</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background-color: #fff;
+      font-size: 12px;
+    }
+
+    .form-container {
+      padding: 10px 12px 8px 12px;
+    }
+
+    h1 {
+      color: #333;
+      text-align: center;
+      margin: 0 0 8px 0;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 6px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 2px;
+      font-weight: bold;
+      color: #555;
+      font-size: 11px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 2px 6px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      box-sizing: border-box;
+      font-size: 12px;
+      height: 26px;
+    }
+
+    input[type="number"]:focus {
+      border-color: #4CAF50;
+      outline: none;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 4px 10px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      width: 100%;
+      margin-top: 4px;
+      height: 28px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status-box {
+      background-color: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      padding: 4px 6px;
+      border-radius: 3px;
+      margin-top: 6px;
+      font-size: 11px;
+      color: #666;
+      min-height: 14px;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .status-box.error {
+      border-color: #e74c3c;
+      color: #e74c3c;
+      background-color: #fdf0ef;
+    }
+
+    .status-box.success {
+      border-color: #4CAF50;
+      color: #4CAF50;
+      background-color: #f0faf0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="form-container">
+    <h1>Сетка направляющих</h1>
+
+    <div class="form-group">
+      <label for="guide-count">Количество направляющих</label>
+      <input type="number" id="guide-count" min="1" max="50" value="3" step="1">
+    </div>
+
+    <div class="form-group">
+      <label for="edge-offset">Отступ от края (мм)</label>
+      <input type="number" id="edge-offset" min="0" value="100" step="10">
+    </div>
+
+    <div class="form-group">
+      <label for="interval">Интервал между направляющими (мм)</label>
+      <input type="number" id="interval" min="1" value="200" step="10">
+    </div>
+
+    <button type="button" id="apply-btn">Применить</button>
+
+    <div class="status-box" id="status">
+      Выберите плоскость по трём точкам, затем растяните прямоугольник
+    </div>
+  </div>
+
+  <script src="./js/jquery-3.6.0.min.js"></script>
+  <script>
+    let hasRectangle = false;
+
+    function getSettings() {
+      return {
+        guideCount: parseInt(document.getElementById('guide-count').value, 10) || 0,
+        edgeOffset: parseInt(document.getElementById('edge-offset').value, 10) || 0,
+        interval: parseInt(document.getElementById('interval').value, 10) || 0
+      };
+    }
+
+    function validateSettings(settings) {
+      if (settings.guideCount < 1 || settings.guideCount > 50) {
+        return 'Количество направляющих должно быть от 1 до 50';
+      }
+      if (settings.edgeOffset < 0) {
+        return 'Отступ не может быть отрицательным';
+      }
+      if (settings.interval < 1) {
+        return 'Интервал должен быть не менее 1 мм';
+      }
+      return null;
+    }
+
+    function applySettings() {
+      var settings = getSettings();
+      var error = validateSettings(settings);
+      if (error) {
+        setStatus(error, 'error');
+        return;
+      }
+      if (!hasRectangle) {
+        setStatus('Сначала задайте прямоугольник в модели', 'error');
+        return;
+      }
+      sketchup.apply_settings(JSON.stringify(settings));
+    }
+
+    function setStatus(message, type) {
+      var el = document.getElementById('status');
+      el.textContent = message;
+      el.className = 'status-box';
+      if (type) {
+        el.classList.add(type);
+      }
+    }
+
+    // Called from Ruby when rectangle is set
+    function onRectangleReady() {
+      hasRectangle = true;
+      document.getElementById('apply-btn').disabled = false;
+      setStatus('Прямоугольник задан. Нажмите «Применить» для генерации направляющих', 'success');
+    }
+
+    // Called from Ruby when guides are regenerated
+    function onGuidesGenerated(count) {
+      setStatus('Сгенерировано направляющих: ' + count, 'success');
+    }
+
+    $(document).ready(function () {
+      document.getElementById('apply-btn').addEventListener('click', applySettings);
+
+      // Enter key in any input triggers apply
+      document.querySelectorAll('input').forEach(function (input) {
+        input.addEventListener('keypress', function (e) {
+          if (e.key === 'Enter') {
+            applySettings();
+          }
+        });
+      });
+
+      window.location = 'skp:dialog_ready';
+    });
+  </script>
+</body>
+
+</html>

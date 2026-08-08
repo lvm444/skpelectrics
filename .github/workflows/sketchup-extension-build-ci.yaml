@@ -25,7 +25,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        gem install minitest-reporters simplecov
+        gem install simplecov -v '~> 0.22.0'
 
     - name: Run unit tests
       run: |
@@ -122,43 +122,16 @@ jobs:
                env.tag_type == 'custom' && format('skpelectrics-{0}.rbz', github.ref_name) ||
                format('skpelectrics-nightly-{0}.rbz', github.run_number) }}
 
-    # Release creation (only for release tags)
-    - name: Create Release
-      if: env.tag_type == 'release'
-      uses: actions/create-release@v1
-      id: create_release
+    # Release + asset upload (release and custom tags only)
+    - name: Create Release and Upload Asset
+      if: env.tag_type == 'release' || env.tag_type == 'custom'
+      uses: softprops/action-gh-release@v2
       with:
-        draft: false
-        prerelease: false
-        release_name: Release ${{ env.raw_version }}
         tag_name: ${{ github.ref_name }}
-        body: |
-          Release ${{ env.raw_version }}
-          Auto-generated release for ${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # Upload to release (only for release tags)
-    - name: Upload Release Asset
-      if: env.tag_type == 'release'
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: skpelectrics-${{ env.safe_version }}.rbz
-        asset_name: skpelectrics-${{ env.safe_version }}.rbz
-        asset_content_type: application/zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # Feature/dev tag upload (not a full release)
-    - name: Upload Tag Asset
-      if: env.tag_type == 'custom'
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ format('https://uploads.github.com/repos/{0}/{1}/releases/tags/{2}/assets', github.repository_owner, github.repository, github.ref_name) }}
-        asset_path: skpelectrics-${{ github.ref_name }}.rbz
-        asset_name: skpelectrics-${{ github.ref_name }}.rbz
-        asset_content_type: application/zip
+        name: ${{ env.tag_type == 'release' && format('Release {0}', env.raw_version) || github.ref_name }}
+        draft: false
+        prerelease: ${{ env.tag_type == 'custom' }}
+        files: ${{ env.tag_type == 'release' && format('skpelectrics-{0}.rbz', env.safe_version) || format('skpelectrics-{0}.rbz', github.ref_name) }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

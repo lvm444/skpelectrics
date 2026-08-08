@@ -6,6 +6,15 @@ module UI; end
 module Geom; end
 module Length; end
 
+# Mock SketchUp Length conversions (Numeric#mm, Numeric#cm, etc.)
+# SketchUp stores lengths internally in inches; these methods convert to inches.
+class Numeric
+  def mm;   self / 25.4; end
+  def cm;   self / 2.54;  end
+  def m;    self / 0.0254; end
+  def inch; self;          end
+end
+
 # Mock file_loaded? method for SketchUp extensions
 module Kernel
   def file_loaded?(file)
@@ -28,7 +37,8 @@ module Kernel
 end
 
 # Load coverage if COVERAGE environment variable is set
-if ENV['COVERAGE']
+# Skip inside SketchUp — its bundled Ruby lacks simplecov/minitest gems
+if ENV['COVERAGE'] && !defined?(Sketchup.version)
   require_relative 'coverage_helper'
 end
 

@@ -25,7 +25,7 @@ AllCops:
     Exclude: # Exclude common folders.
     - profiling/
     - skippy/
-    - tests/
+    - test/
   TargetRubyVersion: 2.0
 
 
