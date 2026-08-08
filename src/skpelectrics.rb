@@ -36,6 +36,7 @@ module Lvm444Dev
     end
 
     Dir.glob(File.join(@@dev_dir, '**', '*.rb')).each do |file|
+      next if file.include?('/test/') || file.include?('\\test\\')
       load file
       puts "reload file #{file} - ok"
     end

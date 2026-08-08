@@ -1,32 +1,40 @@
 # Coverage helper for SimpleCov
-require 'simplecov'
+# This file is only meant to run with system Ruby during tests,
+# not inside SketchUp's bundled Ruby.
+return if defined?(Sketchup.version)
 
-# Configure SimpleCov to use consistent path
-SimpleCov.configure do
-  coverage_dir 'test/coverage'
-end
+begin
+  require 'simplecov'
 
-SimpleCov.start do
-  add_filter '/test/'
-  add_filter '/vendor/'
-  add_filter '/.github/'
+  # Configure SimpleCov to use consistent path
+  SimpleCov.configure do
+    coverage_dir 'test/coverage'
+  end
 
-  # Add groups for better organization
-  add_group 'Core', 'src/skpelectrics'
-  add_group 'Dialogs', 'src/skpelectrics/dialog'
-  add_group 'HTML', 'src/skpelectrics/html'
+  SimpleCov.start do
+    add_filter '/test/'
+    add_filter '/vendor/'
+    add_filter '/.github/'
 
-  # Minimum coverage thresholds (optional)
-  minimum_coverage 15  # Set to 15% to allow CI to pass
-  minimum_coverage_by_file 5
+    # Add groups for better organization
+    add_group 'Core', 'src/skpelectrics'
+    add_group 'Dialogs', 'src/skpelectrics/dialog'
+    add_group 'HTML', 'src/skpelectrics/html'
 
-  # Output format
-  formatter SimpleCov::Formatter::MultiFormatter.new([
-    SimpleCov::Formatter::HTMLFormatter,
-    SimpleCov::Formatter::SimpleFormatter
-  ])
+    # Minimum coverage thresholds (optional)
+    minimum_coverage 15  # Set to 15% to allow CI to pass
+    minimum_coverage_by_file 5
 
-  command_name 'Unit Tests'
+    # Output format
+    formatter SimpleCov::Formatter::MultiFormatter.new([
+      SimpleCov::Formatter::HTMLFormatter,
+      SimpleCov::Formatter::SimpleFormatter
+    ])
+
+    command_name 'Unit Tests'
+  end
+rescue LoadError
+  puts "WARNING: simplecov gem not installed. Run `bundle install` or `gem install simplecov` to enable coverage reports."
 end
 
 # Load minitest and test helper

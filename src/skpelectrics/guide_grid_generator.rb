@@ -8,7 +8,7 @@ module Lvm444Dev
     # ================================================================
 
     @dialog = nil
-    @guide_clines = []         # Array of created ConstructionLine entities
+    @guide_group = nil         # Sketchup::Group containing all ConstructionLines
     @rectangle = nil           # { corners: [p0,p1,p2,p3], plane: [a,b,c,d] }
     @tool_active = false
 
@@ -59,15 +59,11 @@ module Lvm444Dev
     # ================================================================
 
     def self.clear_guides
-      model = Sketchup.active_model
-      return unless model
-
-      entities = model.active_entities
-      @guide_clines.each do |cline|
-        next unless cline.valid?
-        entities.erase_entities(cline)
+      return unless @guide_group
+      if @guide_group.valid?
+        @guide_group.erase!
       end
-      @guide_clines.clear
+      @guide_group = nil
     end
 
     def self.regenerate_guides
@@ -84,9 +80,9 @@ module Lvm444Dev
 
       model.commit_operation
 
-      # Notify dialog
+      cline_count = @guide_group ? @guide_group.entities.count { |e| e.is_a?(Sketchup::ConstructionLine) } : 0
       if @dialog && @dialog.visible?
-        @dialog.execute_script("onGuidesGenerated(#{@guide_clines.size})")
+        @dialog.execute_script("onGuidesGenerated(#{cline_count})")
       end
     rescue => e
       model.abort_operation
@@ -101,7 +97,17 @@ module Lvm444Dev
       edge_offset = @settings[:edge_offset]
       interval = @settings[:interval]
 
-      entities = Sketchup.active_model.active_entities
+      model = Sketchup.active_model
+      parent_entities = model.active_entities
+
+      # Find or create parent group "Направляющие"
+      parent_group = find_or_create_guides_root(parent_entities)
+
+      # Create a group to hold all construction lines
+      @guide_group = parent_group.entities.add_group
+      off_mm = edge_offset.to_mm.round
+      int_mm = interval.to_mm.round
+      @guide_group.name = "Направляющие #{count}×#{int_mm}мм отступ #{off_mm}мм"
 
       # Compute rectangle centroid (for inward direction check)
       centroid = Geom::Point3d.new(
@@ -113,6 +119,8 @@ module Lvm444Dev
       # Pre-compute edges: each edge is [p_start, p_end, inward_normal]
       edges = compute_edges_with_normals(corners, normal, centroid)
 
+      group_entities = @guide_group.entities
+
       (0...count).each do |i|
         distance = edge_offset + i * interval
 
@@ -122,14 +130,23 @@ module Lvm444Dev
         # Skip if rectangle collapsed
         next unless inner_corners
 
-        # Create 4 construction lines (one per edge)
+        # Create 4 construction lines (one per edge) inside the group
         (0..3).each do |j|
           p1 = inner_corners[j]
           p2 = inner_corners[(j + 1) % 4]
-          cline = entities.add_cline(p1, p2)
-          @guide_clines << cline
+          group_entities.add_cline(p1, p2)
         end
       end
+    end
+
+    # Find existing "Направляющие" group or create one
+    def self.find_or_create_guides_root(entities)
+      entities.each do |e|
+        return e if e.is_a?(Sketchup::Group) && e.name == 'Направляющие' && e.valid?
+      end
+      group = entities.add_group
+      group.name = 'Направляющие'
+      group
     end
 
     # Compute edge segments with inward normals
@@ -235,6 +252,7 @@ module Lvm444Dev
       }
       dialog = UI::HtmlDialog.new(options)
       dialog.set_file(html_file)
+      dialog.set_size(290, 210)
       dialog.center
       dialog
     end
@@ -276,7 +294,7 @@ module Lvm444Dev
     # ================================================================
 
     class Tool
-      CURSOR_PENCIL = 632
+      CURSOR_PENCIL = 632 unless defined?(CURSOR_PENCIL)
 
       def initialize
         @state = :picking_plane   # :picking_plane | :drawing_rect | :idle
@@ -378,7 +396,7 @@ module Lvm444Dev
             @state = :drawing_rect
             @rect_p1 = nil
             @mouse_pos = nil
-            GuideGridGenerator.instance_variable_set(:@guide_clines, [])
+            GuideGridGenerator.instance_variable_set(:@guide_group, nil)
             GuideGridGenerator.instance_variable_set(:@rectangle, nil)
             puts "Plane computed, ready for rectangle drawing"
           else

@@ -3,7 +3,7 @@ require 'sketchup'
 module Lvm444Dev
   module LineupdownTool
      # Here we have hard coded a special ID for the pencil cursor in SketchUp.
-    CURSOR_PENCIL = 632
+     CURSOR_PENCIL = 632 unless defined?(CURSOR_PENCIL)
 
     def self.activate
       model = Sketchup.active_model

@@ -28,7 +28,8 @@ module Kernel
 end
 
 # Load coverage if COVERAGE environment variable is set
-if ENV['COVERAGE']
+# Skip inside SketchUp — its bundled Ruby lacks simplecov/minitest gems
+if ENV['COVERAGE'] && !defined?(Sketchup.version)
   require_relative 'coverage_helper'
 end
 
