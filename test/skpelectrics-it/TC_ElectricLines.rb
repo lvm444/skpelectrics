@@ -23,7 +23,7 @@ module Lvm444Dev
     end
 
     def test_line_info_01
-      line = get_line_info('01-РОЗ-Кухня')
+      line = get_line_info('01-РОЗ-Кухня Особые группы')
 
       assert_in_delta(5.582 + 4.690, line[:length], delta = 0.0001)
       assert_equal(6, line[:cable_ends_count])
