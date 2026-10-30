@@ -39,7 +39,7 @@ module Lvm444Dev
         when "3"
           pattern = /^(?<room>[1-9][0-9]?)(?<load_type>[А-Яа-яA-Za-z]+)(?<group_in_room>[1-9][0-9]?)(?:\s*--\s*(?<description>.*))?$/
         when "4"
-          pattern = /^(?<line_number>\d*[,.]?\d+)-(?<load_type>[А-ЯA-Z\d+(),]{1,10})-(?<room>[А-яA-Za-z\d\s]+\s*)(?:-(?<description>.+))?$/
+          pattern = /^(?<line_number>\d*[,.]?\d+)-(?<load_type>[А-ЯA-Z\d+(),]{1,10})-(?<room>[А-яA-Za-z\d\s.,\/]+\s*)(?:-(?<description>.+))?$/
         else
           UI.messagebox("Выбран некорректный номер шаблона #{pattern_number}")
           raise "parser error unknown pattern num #{pattern_number}"
