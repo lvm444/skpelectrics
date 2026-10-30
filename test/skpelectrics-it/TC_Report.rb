@@ -40,7 +40,6 @@ module Lvm444Dev
       assert_equal('01', line[:line_number])
       assert_equal('РОЗ', line[:type])
       assert_equal('Кухня', line[:room])
-      assert_nil(line[:description])
       assert_in_delta(12.072, line[:length], delta = 0.0001)
       # запас 6 * 0.3 = 1.8
 

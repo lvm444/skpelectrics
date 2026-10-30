@@ -7,6 +7,7 @@ module Lvm444Dev
     class CableEnds < SketchupVisitor::VertextVisitor
       def initialize(tolerance = 0.001.mm)
         @tolerance = tolerance
+        @transform = Geom::Transformation.new
 
         # @type [Hash<Geom::Point3d, Array<Sketchup::Vertex>>] вершины по округлённым точкам
         @point_to_vertexes = Hash.new { |hash, key| hash[key] = [] }
@@ -18,10 +19,19 @@ module Lvm444Dev
           .map { |vertexes| vertexes[0] }
       end
 
+      # @param group [Sketchup::Group] линия
+      def visit_group(group)
+        transform_before = @transform
+        @transform = @transform * group.transformation
+        super
+        @transform = transform_before
+      end
+
       def visit_vertex(vertex)
         return if vertex.edges.size != 1
 
-        point_key = rounded_point(vertex.position)
+        position = vertex.position.transform(@transform)
+        point_key = rounded_point(position)
         @point_to_vertexes[point_key] << vertex
       end
 
