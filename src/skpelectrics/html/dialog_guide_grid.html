@@ -54,21 +54,45 @@
       outline: none;
     }
 
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
     button {
-      background-color: #4CAF50;
       color: white;
-      padding: 4px 10px;
+      padding: 4px 8px;
       border: none;
       border-radius: 3px;
       cursor: pointer;
       font-size: 12px;
-      width: 100%;
-      margin-top: 4px;
+      flex: 1;
       height: 28px;
     }
 
-    button:hover {
+    #done-btn {
+      background-color: #2196F3;
+    }
+
+    #done-btn:hover {
+      background-color: #0b7dda;
+    }
+
+    #apply-btn {
+      background-color: #4CAF50;
+    }
+
+    #apply-btn:hover {
       background-color: #45a049;
+    }
+
+    #reset-btn {
+      background-color: #f44336;
+    }
+
+    #reset-btn:hover {
+      background-color: #da190b;
     }
 
     button:disabled {
@@ -122,16 +146,21 @@
       <input type="number" id="interval" min="1" value="200" step="10">
     </div>
 
-    <button type="button" id="apply-btn">Применить</button>
+    <div class="btn-row">
+      <button type="button" id="done-btn" disabled>Готово</button>
+      <button type="button" id="apply-btn" disabled>Применить</button>
+      <button type="button" id="reset-btn" disabled>Сбросить</button>
+    </div>
 
     <div class="status-box" id="status">
-      Выберите плоскость по трём точкам, затем растяните прямоугольник
+      Выберите плоскость по трём точкам
     </div>
   </div>
 
   <script src="./js/jquery-3.6.0.min.js"></script>
   <script>
-    let hasRectangle = false;
+    let hasPlane = false;
+    let hasShape = false;
 
     function getSettings() {
       return {
@@ -154,20 +183,6 @@
       return null;
     }
 
-    function applySettings() {
-      var settings = getSettings();
-      var error = validateSettings(settings);
-      if (error) {
-        setStatus(error, 'error');
-        return;
-      }
-      if (!hasRectangle) {
-        setStatus('Сначала задайте прямоугольник в модели', 'error');
-        return;
-      }
-      sketchup.apply_settings(JSON.stringify(settings));
-    }
-
     function setStatus(message, type) {
       var el = document.getElementById('status');
       el.textContent = message;
@@ -177,22 +192,71 @@
       }
     }
 
-    // Called from Ruby when rectangle is set
-    function onRectangleReady() {
-      hasRectangle = true;
-      document.getElementById('apply-btn').disabled = false;
-      setStatus('Прямоугольник задан. Нажмите «Применить» для генерации направляющих', 'success');
+    function applySettings() {
+      var settings = getSettings();
+      var error = validateSettings(settings);
+      if (error) {
+        setStatus(error, 'error');
+        return;
+      }
+      if (!hasShape) {
+        setStatus('Сначала нарисуйте форму и нажмите «Готово»', 'error');
+        return;
+      }
+      sketchup.apply_settings(JSON.stringify(settings));
     }
 
-    // Called from Ruby when guides are regenerated
+    function finishShape() {
+      if (!hasPlane) {
+        setStatus('Сначала выберите плоскость по трём точкам', 'error');
+        return;
+      }
+      sketchup.finish_shape();
+    }
+
+    function resetShape() {
+      sketchup.reset_shape();
+    }
+
+    // ---- Callbacks from Ruby ----
+
+    function onPlaneReady() {
+      hasPlane = true;
+      document.getElementById('done-btn').disabled = false;
+      document.getElementById('reset-btn').disabled = false;
+      setStatus('Добавляйте прямоугольники (по 2 клика), затем «Готово»');
+    }
+
+    function onRectangleAdded(count) {
+      hasPlane = true;
+      document.getElementById('done-btn').disabled = false;
+      setStatus('Прямоугольников: ' + count + '. Добавляйте ещё или жмите «Готово»');
+    }
+
+    function onShapeReady() {
+      hasShape = true;
+      document.getElementById('apply-btn').disabled = false;
+      setStatus('Форма готова. Меняйте настройки и жмите «Применить»', 'success');
+    }
+
     function onGuidesGenerated(count) {
-      setStatus('Сгенерировано направляющих: ' + count, 'success');
+      setStatus('Направляющих создано: ' + count, 'success');
+    }
+
+    function onShapeReset() {
+      hasPlane = false;
+      hasShape = false;
+      document.getElementById('done-btn').disabled = true;
+      document.getElementById('apply-btn').disabled = true;
+      document.getElementById('reset-btn').disabled = true;
+      setStatus('Сброшено. Выберите плоскость по трём точкам');
     }
 
     $(document).ready(function () {
+      document.getElementById('done-btn').addEventListener('click', finishShape);
       document.getElementById('apply-btn').addEventListener('click', applySettings);
+      document.getElementById('reset-btn').addEventListener('click', resetShape);
 
-      // Enter key in any input triggers apply
       document.querySelectorAll('input').forEach(function (input) {
         input.addEventListener('keypress', function (e) {
           if (e.key === 'Enter') {
